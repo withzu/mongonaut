@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://raw.githubusercontent.com/usemongonaut/mongonaut/1ab38bf1d571391c84572749be1e01c3143074e6/public/images/logo.png" width="125" />
+    <img src="https://raw.githubusercontent.com/withzu/mongonaut/1ab38bf1d571391c84572749be1e01c3143074e6/public/images/logo.png" width="125" />
 </p>
 
 <p align="center">
@@ -20,4 +20,4 @@ How to install and secure Mongonaut is explained in our [documentation](https://
 
 ## License
 
-Mongonaut is licensed under the [MIT License](LICENSE).
+Mongonaut is a [The Zu Company](https://thezucompany.com) Product, licensed under the [MIT License](LICENSE).

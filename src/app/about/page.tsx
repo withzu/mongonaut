@@ -67,7 +67,7 @@ export default function Home() {
 									<h2 className="font-semibold">Quick Access</h2>
 								</div>
 								<div className="grid gap-2">
-									<Link href="https://github.com/usemongonaut/mongonaut" target="_blank">
+									<Link href="https://github.com/withzu/mongonaut" target="_blank">
 										<Button
 											variant="ghost"
 											className="w-full justify-start h-auto py-3 px-4 hover:bg-background/80"
@@ -77,7 +77,7 @@ export default function Home() {
 												<div className="flex flex-col items-start">
 													<span className="text-sm font-medium">Repository</span>
 													<span className="text-xs text-muted-foreground">
-														github.com/usemongonaut/mongonaut
+														github.com/withzu/mongonaut
 													</span>
 												</div>
 											</div>
@@ -99,7 +99,7 @@ export default function Home() {
 											</div>
 										</Button>
 									</Link>
-									<Link href="https://github.com/usemongonaut/mongonaut" target="_blank">
+									<Link href="https://github.com/withzu/mongonaut" target="_blank">
 										<Button
 											variant="ghost"
 											className="w-full justify-start h-auto py-3 px-4 hover:bg-background/80"

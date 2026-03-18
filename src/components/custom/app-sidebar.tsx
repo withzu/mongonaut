@@ -244,7 +244,7 @@ export function AppSidebar({
 
 					<div className="flex justify-between">
 						<Link
-							href="https://github.com/usemongonaut/mongonaut"
+							href="https://github.com/withzu/mongonaut"
 							target="_blank"
 							className="flex items-center gap-2"
 						>

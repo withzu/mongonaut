@@ -2,6 +2,7 @@
 	"name": "mongonaut",
 	"version": "0.0.1-alpha.8",
 	"license": "MIT",
+	"author": "The Zu Company (https://thezucompany.com)",
 	"scripts": {
 		"dev": "next dev",
 		"build": "next build",
