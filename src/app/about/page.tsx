@@ -1,9 +1,11 @@
-import { Github, Users, BookOpen, Code, Star } from 'lucide-react';
+'use client';
+
+import { Github, BookOpen, Code, Star, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { AppContainer } from '@/components/custom/app-container';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Card } from '@/components/ui/card';
 import packageJson from '../../../package.json';
 
 export default function Home() {
@@ -22,74 +24,72 @@ export default function Home() {
 								</div>
 							</div>
 						</div>
-						<Button variant="outline" className="gap-2">
-							<img src="/images/github-mark.svg" alt="GitHub" className="w-4 h-4 dark:invert" />
-							View on GitHub
+						<Button variant="outline" className="gap-2" asChild>
+							<Link href="https://github.com/withzu/mongonaut" target="_blank">
+								<img src="/images/github-mark.svg" alt="GitHub" className="w-4 h-4 dark:invert" />
+								View on GitHub
+							</Link>
 						</Button>
 					</div>
 
-					<div className="bg-linear-to-br w-full from-purple-500/5 via-background to-blue-500/5 rounded-lg border p-6">
-						<div className="grid gap-6 w-full">
-							<div className="space-y-4">
-								<div className="flex items-center gap-2">
-									<Users className="w-5 h-5 text-purple-500" />
-									<h2 className="font-semibold">Contributors</h2>
+					<div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-[#FFB211]/10 via-background to-amber-400/10">
+						<div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
+						<div className="relative py-12 px-8">
+							<div className="flex flex-col items-center gap-6">
+								<div className="flex items-center justify-center py-4 px-8 rounded-xl bg-background/60 backdrop-blur-sm border border-[#FFB211]/20 shadow-lg">
+									<img
+										src="/images/zu/logo.svg"
+										alt="The Zu Company"
+										className="h-16 w-auto dark:hidden"
+									/>
+									<img
+										src="/images/zu/logo-dark.svg"
+										alt="The Zu Company"
+										className="h-16 w-auto hidden dark:block"
+									/>
 								</div>
-								<div className="flex flex-wrap gap-2">
-									<a href="https://github.com/toohard2explain" target="_blank">
-										<div className="flex items-center gap-2 bg-background/50 backdrop-blur-xs px-3 py-1.5 rounded-full border border-border/50">
-											<img
-												src="https://avatars.githubusercontent.com/u/78054244?v=4"
-												className="w-6 h-6 rounded-full"
-												alt=""
-											/>
-											<span className="text-sm">Levi H</span>
-										</div>
-									</a>
-									<a href="https://github.com/maaaathis" target="_blank">
-										<div className="flex items-center gap-2 bg-background/50 backdrop-blur-xs px-3 py-1.5 rounded-full border border-border/50">
-											<img
-												src="https://avatars.githubusercontent.com/u/37186532?v=4"
-												className="w-6 h-6 rounded-full"
-												alt=""
-											/>
-											<span className="text-sm">maaaathis</span>
-										</div>
-									</a>
+
+								<div className="flex flex-col items-center text-center space-y-3 max-w-2xl">
+									<div className="flex items-center gap-2.5">
+										<h2 className="text-lg font-semibold">Powered by The Zu Company</h2>
+									</div>
+									<p className="text-sm text-muted-foreground leading-relaxed">
+										Mongonaut is proudly developed and maintained by{' '}
+										<span className="font-semibold text-foreground">The Zu Company</span> – building
+										innovative tools for developers and data enthusiasts.
+									</p>
+									<div className="flex items-center gap-3 pt-3">
+										<Button
+											variant="default"
+											className="gap-2 bg-[#FFB211] hover:bg-[#E5A010] text-black"
+											asChild
+										>
+											<Link href="https://thezucompany.com" target="_blank">
+												Visit The Zu Company
+												<ExternalLink className="w-4 h-4" />
+											</Link>
+										</Button>
+									</div>
 								</div>
 							</div>
+						</div>
+					</div>
 
-							<Separator />
-
+					<div className="grid md:grid-cols-2 gap-6">
+						<Card className="p-6">
 							<div className="space-y-4">
 								<div className="flex items-center gap-2">
-									<Code className="w-5 h-5 text-blue-500" />
-									<h2 className="font-semibold">Quick Access</h2>
+									<BookOpen className="w-5 h-5 text-blue-500" />
+									<h2 className="font-semibold">Documentation & Resources</h2>
 								</div>
 								<div className="grid gap-2">
-									<Link href="https://github.com/withzu/mongonaut" target="_blank">
+									<Link href="https://mongonaut.org" target="_blank">
 										<Button
 											variant="ghost"
-											className="w-full justify-start h-auto py-3 px-4 hover:bg-background/80"
+											className="w-full justify-between h-auto py-3 px-4 hover:bg-accent"
 										>
 											<div className="flex items-center gap-3">
-												<Github className="w-5 h-5 text-muted-foreground" />
-												<div className="flex flex-col items-start">
-													<span className="text-sm font-medium">Repository</span>
-													<span className="text-xs text-muted-foreground">
-														github.com/withzu/mongonaut
-													</span>
-												</div>
-											</div>
-										</Button>
-									</Link>
-									<Link href="https://mongonaut.org/docs" target="_blank">
-										<Button
-											variant="ghost"
-											className="w-full justify-start h-auto py-3 px-4 hover:bg-background/80"
-										>
-											<div className="flex items-center gap-3">
-												<BookOpen className="w-5 h-5 text-muted-foreground" />
+												<BookOpen className="w-4 h-4 text-muted-foreground" />
 												<div className="flex flex-col items-start">
 													<span className="text-sm font-medium">Documentation</span>
 													<span className="text-xs text-muted-foreground">
@@ -97,23 +97,83 @@ export default function Home() {
 													</span>
 												</div>
 											</div>
+											<ExternalLink className="w-4 h-4 text-muted-foreground" />
 										</Button>
 									</Link>
 									<Link href="https://github.com/withzu/mongonaut" target="_blank">
 										<Button
 											variant="ghost"
-											className="w-full justify-start h-auto py-3 px-4 hover:bg-background/80"
+											className="w-full justify-between h-auto py-3 px-4 hover:bg-accent"
 										>
 											<div className="flex items-center gap-3">
-												<Star className="w-5 h-5 text-muted-foreground" />
+												<Github className="w-4 h-4 text-muted-foreground" />
 												<div className="flex flex-col items-start">
-													<span className="text-sm font-medium">Star the Project</span>
-													<span className="text-xs text-muted-foreground">Show your support</span>
+													<span className="text-sm font-medium">GitHub Repository</span>
+													<span className="text-xs text-muted-foreground">
+														View source code & contribute
+													</span>
 												</div>
 											</div>
+											<ExternalLink className="w-4 h-4 text-muted-foreground" />
 										</Button>
 									</Link>
 								</div>
+							</div>
+						</Card>
+
+						<Card className="p-6">
+							<div className="space-y-4">
+								<div className="flex items-center gap-2">
+									<Star className="w-5 h-5 text-[#FFB211]" />
+									<h2 className="font-semibold">Community</h2>
+								</div>
+								<div className="grid gap-2">
+									<Link href="https://github.com/withzu/mongonaut" target="_blank">
+										<Button
+											variant="ghost"
+											className="w-full justify-between h-auto py-3 px-4 hover:bg-accent"
+										>
+											<div className="flex items-center gap-3">
+												<Star className="w-4 h-4 text-muted-foreground" />
+												<div className="flex flex-col items-start">
+													<span className="text-sm font-medium">Star on GitHub</span>
+													<span className="text-xs text-muted-foreground">Show your support</span>
+												</div>
+											</div>
+											<ExternalLink className="w-4 h-4 text-muted-foreground" />
+										</Button>
+									</Link>
+									<Link href="https://github.com/withzu/mongonaut/issues" target="_blank">
+										<Button
+											variant="ghost"
+											className="w-full justify-between h-auto py-3 px-4 hover:bg-accent"
+										>
+											<div className="flex items-center gap-3">
+												<Code className="w-4 h-4 text-muted-foreground" />
+												<div className="flex flex-col items-start">
+													<span className="text-sm font-medium">Report Issues</span>
+													<span className="text-xs text-muted-foreground">Help us improve</span>
+												</div>
+											</div>
+											<ExternalLink className="w-4 h-4 text-muted-foreground" />
+										</Button>
+									</Link>
+								</div>
+							</div>
+						</Card>
+					</div>
+
+					<div className="rounded-lg border bg-muted/50 p-6">
+						<div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+							<div className="space-y-1">
+								<h3 className="font-medium">Open Source MongoDB Management</h3>
+								<p className="text-sm text-muted-foreground">
+									Free, powerful, and built for the modern web
+								</p>
+							</div>
+							<div className="flex items-center gap-2">
+								<Badge variant="outline">MIT License</Badge>
+								<Badge variant="outline">Open Source</Badge>
 							</div>
 						</div>
 					</div>
