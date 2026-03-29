@@ -8,6 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
 	ChevronRightIcon,
 	DatabaseIcon,
+	InfoIcon,
 	MenuIcon,
 	PlusIcon,
 	SearchIcon,
@@ -242,7 +243,7 @@ export function AppSidebar({
 						</div>
 					)}
 
-					<div className="flex justify-between">
+					<div className="flex justify-between items-center">
 						<Link
 							href="https://github.com/withzu/mongonaut"
 							target="_blank"
@@ -261,7 +262,15 @@ export function AppSidebar({
 								</span>
 							)}
 						</Link>
-						<SettingsButton />
+						<div className="flex gap-1">
+							<Link href="/about">
+								<Button size="icon" variant="ghost">
+									<InfoIcon size={18} />
+									<span className="sr-only">About</span>
+								</Button>
+							</Link>
+							<SettingsButton />
+						</div>
 					</div>
 				</SidebarFooter>
 			</Sidebar>
