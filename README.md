@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="https://raw.githubusercontent.com/withzu/mongonaut/1ab38bf1d571391c84572749be1e01c3143074e6/public/images/logo.png" width="125" />
+    <img src=".github/banner.png" width="100%" />
 </p>
 
 <p align="center">
