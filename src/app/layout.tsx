@@ -3,9 +3,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import React from 'react';
-import { SidebarProvider } from '@/components/ui/sidebar';
 import Providers from '@/app/providers';
-import { DatabaseFetcher } from '@/components/custom/database-fetcher';
 import { ReactScan } from '@/components/custom/react-scan';
 import { envBool } from '@/lib/env';
 
@@ -33,17 +31,7 @@ export default async function RootLayout({ children }: Readonly<RootLayoutProps>
 		<html lang="en" className="w-full h-full" suppressHydrationWarning>
 			{envBool('DEV_REACTSCAN', false) && <ReactScan />}
 			<body className={`${geistSans.variable} ${geistMono.variable} antialiased w-full h-full`}>
-				<Providers>
-					<SidebarProvider
-						style={
-							{
-								'--sidebar-width': '350px',
-							} as React.CSSProperties
-						}
-					>
-						<DatabaseFetcher>{children}</DatabaseFetcher>
-					</SidebarProvider>
-				</Providers>
+				<Providers>{children}</Providers>
 			</body>
 		</html>
 	);

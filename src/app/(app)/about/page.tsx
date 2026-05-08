@@ -6,7 +6,7 @@ import { AppContainer } from '@/components/custom/app-container';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import packageJson from '../../../package.json';
+import packageJson from '../../../../package.json';
 
 export default function Home() {
 	return (

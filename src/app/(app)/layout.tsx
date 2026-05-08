@@ -1,0 +1,21 @@
+import React from 'react';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { DatabaseFetcher } from '@/components/custom/database-fetcher';
+
+interface AppLayoutProps {
+	children: React.ReactNode;
+}
+
+export default async function AppLayout({ children }: Readonly<AppLayoutProps>) {
+	return (
+		<SidebarProvider
+			style={
+				{
+					'--sidebar-width': '350px',
+				} as React.CSSProperties
+			}
+		>
+			<DatabaseFetcher>{children}</DatabaseFetcher>
+		</SidebarProvider>
+	);
+}
