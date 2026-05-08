@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import {
 	Dialog,
@@ -40,19 +40,13 @@ export function CreateItemDialog({
 	initialItemType = 'database',
 }: CreateItemDialogProps) {
 	const { reloadData } = useDatabaseFetcher();
-	const [itemType, setItemType] = useState<ItemType>(
-		databases.length === 0 ? 'database' : initialItemType,
-	);
+	const [selectedItemType, setSelectedItemType] = useState<ItemType>(initialItemType);
 	const [dbName, setDbName] = useState('');
 	const [collectionName, setCollectionName] = useState('');
 	const [selectedDb, setSelectedDb] = useState('');
 	const [isCreating, setIsCreating] = useState(false);
 
-	useEffect(() => {
-		if (databases.length === 0) {
-			setItemType('database');
-		}
-	}, [databases]);
+	const itemType: ItemType = databases.length === 0 ? 'database' : selectedItemType;
 
 	const handleCreate = async () => {
 		setIsCreating(true);
@@ -118,7 +112,7 @@ export function CreateItemDialog({
 					<Tabs
 						defaultValue={itemType}
 						className="w-full"
-						onValueChange={(value: string) => setItemType(value as ItemType)}
+						onValueChange={(value: string) => setSelectedItemType(value as ItemType)}
 					>
 						<TabsList className="grid w-full grid-cols-2">
 							<TabsTrigger value="database">Database</TabsTrigger>

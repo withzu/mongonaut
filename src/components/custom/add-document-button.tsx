@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Loader2, PlusIcon, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useParams, useRouter } from 'next/navigation';
@@ -25,17 +25,15 @@ export function AddDocumentButton() {
 	const [open, setOpen] = useState(false);
 	const [jsonInput, setJsonInput] = useState('{\n  \n}');
 	const [isLoading, setIsLoading] = useState(false);
-	const [isValid, setIsValid] = useState(true);
 	const database = params.database as string;
 	const collection = params.collection as string;
 
-	useEffect(() => {
+	const isValid = useMemo(() => {
 		try {
 			JSON.parse(jsonInput);
-			setIsValid(true);
-		} catch (error) {
-			console.error(error);
-			setIsValid(false);
+			return true;
+		} catch {
+			return false;
 		}
 	}, [jsonInput]);
 
