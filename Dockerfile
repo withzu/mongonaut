@@ -1,53 +1,36 @@
-FROM node:24-alpine AS builder
+FROM node:24-alpine AS base
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN corepack enable
 WORKDIR /app
 
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_ENV=development
+FROM base AS deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
-RUN apk update && apk upgrade && \
-    apk add --no-cache libc6-compat dumb-init python3 make g++
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-COPY package.json ./
-
-RUN npm install --include=dev --no-package-lock
-
+FROM base AS builder
+ENV NODE_ENV=production
+ENV CI=true
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN pnpm build
 
-ARG MONGO_CONNECTION_URL=mongodb://localhost:27017
-ENV MONGO_CONNECTION_URL=${MONGO_CONNECTION_URL}
-ARG MONGONAUT_READONLY=false
-ENV MONGONAUT_READONLY=${MONGONAUT_READONLY}
-ARG MONGONAUT_TIMEOUT=5000
-ENV MONGONAUT_TIMEOUT=${MONGONAUT_TIMEOUT}
-ARG MONGONAUT_AUTH_MODE=NONE
-ENV MONGONAUT_AUTH_MODE=${MONGONAUT_AUTH_MODE}
-
-ENV NODE_ENV=production
-
-RUN npm run build
-
-FROM node:24-alpine
+FROM node:24-alpine AS runner
 WORKDIR /app
 
-ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=8081
+ENV HOSTNAME="0.0.0.0"
 
-RUN apk update && apk upgrade && apk add --no-cache libc6-compat dumb-init
-
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+RUN apk add --no-cache dumb-init \
+    && addgroup --system --gid 1001 nodejs \
+    && adduser --system --uid 1001 nextjs
 
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-EXPOSE 8081
-ENV PORT=8081
-ENV HOSTNAME="0.0.0.0"
-
 USER nextjs
+EXPOSE 8081
 
 CMD ["dumb-init", "node", "server.js"]

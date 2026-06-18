@@ -47,5 +47,5 @@ next-env.d.ts
 .idea/shelf
 .idea/dictionaries
 
-# npm package-lock because we use bun
 package-lock.json
+yarn.lock

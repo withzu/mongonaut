@@ -1,0 +1,24 @@
+node_modules
+.next
+out
+build
+.git
+.github
+.idea
+.vscode
+
+# secrets / local env
+.env
+.env.*
+!.env.example
+
+# logs & misc
+npm-debug.log*
+yarn-debug.log*
+.pnpm-debug.log*
+.DS_Store
+coverage
+
+Dockerfile
+.dockerignore
+docker-compose.yml
