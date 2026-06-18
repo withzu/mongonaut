@@ -11,7 +11,7 @@ import packageJson from '../../../../package.json';
 export default function Home() {
 	return (
 		<AppContainer>
-			<div className="w-full mx-auto p-4">
+			<div className="mx-auto w-full">
 				<div className="flex flex-col gap-8 w-full">
 					<div className="flex items-center justify-between">
 						<div className="flex items-center gap-4">
@@ -51,11 +51,11 @@ export default function Home() {
 
 								<div className="flex flex-col items-center text-center space-y-3 max-w-2xl">
 									<div className="flex items-center gap-2.5">
-										<h2 className="text-lg font-semibold">Powered by The Zu Company</h2>
+										<h2 className="text-lg font-semibold">A The Zu Company Product</h2>
 									</div>
 									<p className="text-sm text-muted-foreground leading-relaxed">
 										Mongonaut is proudly developed and maintained by{' '}
-										<span className="font-semibold text-foreground">The Zu Company</span> – building
+										<span className="font-semibold text-foreground">The Zu Company</span>, building
 										innovative tools for developers and data enthusiasts.
 									</p>
 									<div className="flex items-center gap-3 pt-3">

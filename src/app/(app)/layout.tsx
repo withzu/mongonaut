@@ -9,6 +9,7 @@ interface AppLayoutProps {
 export default async function AppLayout({ children }: Readonly<AppLayoutProps>) {
 	return (
 		<SidebarProvider
+			className="bg-sidebar"
 			style={
 				{
 					'--sidebar-width': '350px',

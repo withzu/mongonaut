@@ -8,11 +8,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
 	ChevronRightIcon,
 	DatabaseIcon,
-	InfoIcon,
 	MenuIcon,
 	PlusIcon,
 	SearchIcon,
-	SlashIcon,
 	TableIcon,
 } from 'lucide-react';
 import type { Document } from 'mongodb';
@@ -44,6 +42,8 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { CreateItemDialog } from '@/components/custom/create-item-dialog';
+import { SidebarFooterActions } from '@/components/custom/sidebar-footer-actions';
+import { cn } from '@/lib/utils';
 
 interface AppSidebarProps {
 	databases: Database[];
@@ -166,15 +166,29 @@ export function AppSidebar({
 			</div>
 
 			<Sidebar side="left" collapsible="offcanvas">
+				<div className="flex h-11 shrink-0 items-center px-2">
+					<Link href="/" className="flex items-center gap-2">
+						<Image
+							src="/images/logo.svg"
+							alt="Mongonaut"
+							className="dark:invert"
+							width={30}
+							height={30}
+							priority
+						/>
+						<span className="text-sm font-semibold tracking-tight">Mongonaut</span>
+					</Link>
+				</div>
+
 				<SidebarHeader>
-					<div className="relative mt-4">
+					<div className="relative mx-1.5">
 						<Input
 							placeholder="Search databases & collections..."
-							className="pl-8 h-10 md:h-8"
+							className="bg-background dark:bg-background h-10 pl-8 md:h-8"
 							value={search}
 							onChange={e => setSearch(e.target.value)}
 						/>
-						<div className="absolute p-2.5 left-0 top-0">
+						<div className="absolute left-0 top-0 p-2.5">
 							<SearchIcon size={14} className="text-muted-foreground" />
 						</div>
 					</div>
@@ -243,35 +257,7 @@ export function AppSidebar({
 						</div>
 					)}
 
-					<div className="flex justify-between items-center">
-						<Link
-							href="https://github.com/withzu/mongonaut"
-							target="_blank"
-							className="flex items-center gap-2"
-						>
-							<Image
-								src="/images/logo.svg"
-								alt="Mongonaut"
-								className="dark:invert"
-								width={30}
-								height={30}
-							/>
-							{readOnly && (
-								<span className="text-primary-foreground rounded-full text-xs bg-primary px-2.5 py-0.5">
-									Read-only
-								</span>
-							)}
-						</Link>
-						<div className="flex gap-1">
-							<Link href="/about">
-								<Button size="icon" variant="ghost">
-									<InfoIcon size={18} />
-									<span className="sr-only">About</span>
-								</Button>
-							</Link>
-							<SettingsButton />
-						</div>
-					</div>
+					<SidebarFooterActions readOnly={readOnly} />
 				</SidebarFooter>
 			</Sidebar>
 
@@ -292,6 +278,7 @@ export function CollapsibleDatabaseSidebarItem({
 	onOpenChangeAction?: (open: boolean) => void;
 }) {
 	const router = useRouter();
+	const pathname = usePathname();
 
 	const filteredCollections = useMemo(() => {
 		const searchTerm = search.trim().toLowerCase();
@@ -302,6 +289,8 @@ export function CollapsibleDatabaseSidebarItem({
 		);
 	}, [database.collections, database.name, search]);
 
+	const currentPath = decodeURIComponent(pathname);
+
 	return (
 		<SidebarMenuItem>
 			<Collapsible
@@ -310,11 +299,11 @@ export function CollapsibleDatabaseSidebarItem({
 				className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
 			>
 				<CollapsibleTrigger asChild>
-					<SidebarMenuButton>
-						<ChevronRightIcon className="transition-transform" />
-						<DatabaseIcon />
+					<SidebarMenuButton className="font-medium">
+						<ChevronRightIcon className="text-muted-foreground transition-transform" />
+						<DatabaseIcon className="text-muted-foreground" />
 						<span className="truncate">{database.name}</span>
-						<span className="ml-auto text-muted-foreground text-xs">
+						<span className="text-muted-foreground/60 ml-auto text-[11px] tabular-nums">
 							{prettyBytes(database.totalSize)}
 						</span>
 					</SidebarMenuButton>
@@ -322,21 +311,30 @@ export function CollapsibleDatabaseSidebarItem({
 
 				<CollapsibleContent>
 					<SidebarMenuSub>
-						{filteredCollections.map(collection => (
-							<SidebarMenuButton
-								key={collection.name}
-								onClick={() => router.push(`/${database.name}/${collection.name}`)}
-								className="data-[active=true]:bg-transparent cursor-pointer"
-							>
-								<TableIcon />
-								<span className="truncate">{collection.name}</span>
-								<div className="ml-auto text-muted-foreground text-xs flex gap-1 shrink-0">
-									<span>{collection.documentCount}</span>
-									<SlashIcon size={8} className="my-auto" />
-									<span>{prettyBytes(collection.totalSize)}</span>
-								</div>
-							</SidebarMenuButton>
-						))}
+						{filteredCollections.map(collection => {
+							const isActive = currentPath === `/${database.name}/${collection.name}`;
+							return (
+								<SidebarMenuButton
+									key={collection.name}
+									isActive={isActive}
+									onClick={() => router.push(`/${database.name}/${collection.name}`)}
+									className="cursor-pointer"
+								>
+									<TableIcon className={isActive ? '' : 'text-muted-foreground'} />
+									<span className="truncate">{collection.name}</span>
+									<div
+										className={cn(
+											'ml-auto flex shrink-0 items-center gap-1 text-[11px] tabular-nums',
+											isActive ? 'text-sidebar-accent-foreground/75' : 'text-muted-foreground/60',
+										)}
+									>
+										<span>{collection.documentCount}</span>
+										<span className="opacity-40">/</span>
+										<span>{prettyBytes(collection.totalSize)}</span>
+									</div>
+								</SidebarMenuButton>
+							);
+						})}
 					</SidebarMenuSub>
 				</CollapsibleContent>
 			</Collapsible>

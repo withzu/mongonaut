@@ -206,7 +206,6 @@ function Sidebar({
 			data-side={side}
 			data-slot="sidebar"
 		>
-			{/* This is what handles the sidebar gap on desktop */}
 			<div
 				data-slot="sidebar-gap"
 				className={cn(
@@ -225,10 +224,9 @@ function Sidebar({
 					side === 'left'
 						? 'left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]'
 						: 'right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]',
-					// Adjust the padding for floating and inset variants.
 					variant === 'floating' || variant === 'inset'
 						? 'p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]'
-						: 'group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l',
+						: 'group-data-[collapsible=icon]:w-(--sidebar-width-icon)',
 					className,
 				)}
 				{...props}
@@ -298,6 +296,8 @@ function SidebarInset({ className, ...props }: React.ComponentProps<'main'>) {
 			data-slot="sidebar-inset"
 			className={cn(
 				'bg-background relative flex w-full flex-1 flex-col',
+				'md:border-border md:mt-11 md:rounded-tl-2xl md:border-t md:border-l',
+				'md:peer-data-[collapsible=offcanvas]:rounded-tl-none md:peer-data-[collapsible=offcanvas]:border-l-0',
 				'md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2',
 				className,
 			)}
