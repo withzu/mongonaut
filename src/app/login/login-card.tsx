@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { AlertCircle, KeyRound, LockIcon, ShieldCheck } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { AuthMode } from '@/lib/auth/config';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,34 +28,20 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 export function LoginCard({ mode, misconfigured, next, error }: LoginCardProps) {
 	return (
-		<div className="min-h-screen w-full flex items-center justify-center px-4 py-10 bg-background">
-			<div className="w-full max-w-md flex flex-col items-center gap-6">
-				<div className="flex items-center gap-3">
-					<img src="/images/logo.svg" alt="Mongonaut" className="w-9 h-9 dark:invert" />
-					<span className="text-xl font-semibold tracking-tight">Mongonaut</span>
+		<div className="flex min-h-screen w-full items-center justify-center bg-background px-4 py-10">
+			<div className="flex w-full max-w-sm flex-col gap-10">
+				<div className="flex items-center justify-center gap-2.5">
+					<img src="/images/logo.svg" alt="Mongonaut" className="h-12 w-12 dark:invert" />
+					<span className="text-2xl font-semibold tracking-tight">Mongonaut</span>
 				</div>
 
-				<Card className="w-full border-[#FFB211]/20 shadow-md">
+				<Card>
 					<CardHeader>
-						<div className="flex items-center gap-2">
-							<div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
-								<LockIcon className="h-4 w-4 text-primary" />
-							</div>
-							<div>
-								<CardTitle className="text-base">Authentication required</CardTitle>
-								<CardDescription className="text-xs">
-									Sign in to continue to Mongonaut.
-								</CardDescription>
-							</div>
-						</div>
+						<CardTitle className="text-base">Authentication required</CardTitle>
+						<CardDescription>Sign in to continue.</CardDescription>
 					</CardHeader>
 					<CardContent className="flex flex-col gap-4">
-						{error && ERROR_MESSAGES[error] && (
-							<div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
-								<AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-								<p>{ERROR_MESSAGES[error]}</p>
-							</div>
-						)}
+						{error && ERROR_MESSAGES[error] && <Notice>{ERROR_MESSAGES[error]}</Notice>}
 
 						{misconfigured && <MisconfiguredNotice mode={mode} />}
 
@@ -63,14 +49,6 @@ export function LoginCard({ mode, misconfigured, next, error }: LoginCardProps) 
 						{!misconfigured && mode === 'OIDC' && <OidcLaunch next={next} />}
 					</CardContent>
 				</Card>
-
-				<p className="text-xs text-muted-foreground text-center max-w-sm">
-					{mode === 'STATIC_PASSWORD'
-						? 'Static password authentication is enabled by your administrator.'
-						: mode === 'OIDC'
-							? 'Single sign-on is enabled. You will be redirected to your identity provider.'
-							: ''}
-				</p>
 			</div>
 		</div>
 	);
@@ -111,10 +89,13 @@ function PasswordForm({ next }: { next: string }) {
 	};
 
 	return (
-		<form className="flex flex-col gap-3" onSubmit={onSubmit}>
-			<label className="flex flex-col gap-1.5">
-				<span className="text-xs font-medium text-muted-foreground">Password</span>
+		<form className="flex flex-col gap-4" onSubmit={onSubmit}>
+			<div className="flex flex-col gap-2">
+				<label htmlFor="password" className="text-sm font-medium">
+					Password
+				</label>
 				<Input
+					id="password"
 					type="password"
 					autoComplete="current-password"
 					autoFocus
@@ -123,22 +104,16 @@ function PasswordForm({ next }: { next: string }) {
 					placeholder="Enter the configured password"
 					disabled={submitting}
 				/>
-			</label>
+			</div>
 
-			{errorMessage && (
-				<div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-2.5 text-xs text-destructive">
-					<AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-					<p>{errorMessage}</p>
-				</div>
-			)}
+			{errorMessage && <Notice>{errorMessage}</Notice>}
 
 			<Button
 				type="submit"
 				disabled={submitting || password.length === 0}
-				className="bg-[#FFB211] hover:bg-[#E5A010] text-black"
+				className="w-full bg-[#FFB211] text-black hover:bg-[#E5A010]"
 			>
-				<KeyRound className="h-4 w-4" />
-				{submitting ? 'Signing in...' : 'Sign in'}
+				{submitting ? 'Signing in…' : 'Sign in'}
 			</Button>
 		</form>
 	);
@@ -149,31 +124,36 @@ function OidcLaunch({ next }: { next: string }) {
 	return (
 		<div className="flex flex-col gap-3">
 			<a href={href} className="contents">
-				<Button className="w-full bg-[#FFB211] hover:bg-[#E5A010] text-black">
-					<ShieldCheck className="h-4 w-4" />
+				<Button className="w-full bg-[#FFB211] text-black hover:bg-[#E5A010]">
 					Continue with single sign-on
 				</Button>
 			</a>
-			<p className="text-xs text-muted-foreground">
+			<p className="text-sm text-muted-foreground">
 				You&apos;ll be redirected to your identity provider to complete the sign-in.
 			</p>
 		</div>
 	);
 }
 
+function Notice({ children }: { children: React.ReactNode }) {
+	return (
+		<div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+			<AlertCircle className="mt-0.5 size-4 shrink-0" />
+			<div className="space-y-1">{children}</div>
+		</div>
+	);
+}
+
 function MisconfiguredNotice({ mode }: { mode: AuthMode }) {
 	return (
-		<div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs text-destructive">
-			<AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-			<div className="space-y-1">
-				<p className="font-medium">Authentication is misconfigured.</p>
-				<p>
-					{mode === 'STATIC_PASSWORD'
-						? 'MONGONAUT_AUTH_SECRET and MONGONAUT_AUTH_PASSWORD must both be set.'
-						: 'MONGONAUT_AUTH_SECRET, MONGONAUT_OIDC_ISSUER, MONGONAUT_OIDC_CLIENT_ID and MONGONAUT_OIDC_CLIENT_SECRET must all be set.'}
-				</p>
-				<p>Check your container environment variables and restart Mongonaut.</p>
-			</div>
-		</div>
+		<Notice>
+			<p className="font-medium">Authentication is misconfigured.</p>
+			<p>
+				{mode === 'STATIC_PASSWORD'
+					? 'MONGONAUT_AUTH_SECRET and MONGONAUT_AUTH_PASSWORD must both be set.'
+					: 'MONGONAUT_AUTH_SECRET, MONGONAUT_OIDC_ISSUER, MONGONAUT_OIDC_CLIENT_ID and MONGONAUT_OIDC_CLIENT_SECRET must all be set.'}
+			</p>
+			<p>Check your container environment variables and restart Mongonaut.</p>
+		</Notice>
 	);
 }
