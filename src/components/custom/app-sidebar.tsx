@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
-import { SettingsButton } from '@/components/custom/settings-button';
 import type { Database } from '@/lib/types/mongo';
 import {
 	Breadcrumb,
@@ -77,12 +76,10 @@ function MobileHeader({ readOnly }: { readOnly?: boolean }) {
 			</div>
 
 			{readOnly && (
-				<span className="text-primary-foreground rounded-full text-xs bg-primary px-2.5 py-0.5 mr-2">
+				<span className="text-primary-foreground rounded-full text-xs bg-primary px-2.5 py-0.5">
 					Read-only
 				</span>
 			)}
-
-			<SettingsButton />
 		</div>
 	);
 }
