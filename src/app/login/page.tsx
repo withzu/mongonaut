@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getAuthConfig, getPublicAuthInfo } from '@/lib/auth/config';
 import { readSessionToken, SESSION_COOKIE } from '@/lib/auth/session';
+import { countAccounts } from '@/lib/auth/accounts';
 import { LoginCard } from '@/app/login/login-card';
 
 interface LoginPageProps {
@@ -24,6 +25,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
 	if (cfg.mode === 'NONE') {
 		redirect(next);
+	}
+
+	// In ACCOUNT mode with no accounts yet, send the operator to the one-time setup.
+	if (cfg.mode === 'ACCOUNT' && cfg.secret && (await countAccounts()) === 0) {
+		redirect('/setup');
 	}
 
 	if (cfg.secret) {

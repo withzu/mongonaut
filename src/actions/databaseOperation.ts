@@ -3,11 +3,22 @@
 import { BSON, type Document, type Filter, type Sort } from 'mongodb';
 
 const { EJSON } = BSON;
-import { MongoController } from '@/lib/mongoController';
+import { getMongoController } from '@/lib/mongoController';
 import { Database, MongoDocument } from '@/lib/types/mongo';
 import { envBool } from '@/lib/env';
+import {
+	canReadCollection,
+	canReadDatabase,
+	canWriteResource,
+	getAccessContext,
+	guardAccess,
+	guardAggregation,
+	isHiddenDb,
+	requireAdmin,
+} from '@/lib/auth/server';
+import { INTERNAL_DB } from '@/lib/auth/accounts';
 
-const mongo = new MongoController();
+const mongo = getMongoController();
 
 function assertWritable(): { success: false; error: Error } | null {
 	if (envBool('MONGONAUT_READONLY', false)) {
@@ -17,11 +28,36 @@ function assertWritable(): { success: false; error: Error } | null {
 }
 
 export const getServerInfo = async () => {
+	const guard = await guardAccess({});
+	if (guard) return guard;
 	return await mongo.getServerInfo();
 };
 
+export const getViewerInfo = async () => {
+	const ctx = await getAccessContext();
+	const isAccountAdmin = ctx.mode === 'ACCOUNT' && !!ctx.account?.isAdmin;
+	return {
+		isAccountAdmin,
+		canCreateDatabase: ctx.mode === 'ACCOUNT' ? isAccountAdmin : true,
+		globalReadonly: envBool('MONGONAUT_READONLY', false),
+		mode: ctx.mode,
+	};
+};
+
 export const listDatabases = async () => {
-	return await mongo.listDatabases();
+	const result = await mongo.listDatabases();
+	if (!result.success || !result.data) return result;
+
+	const ctx = await getAccessContext();
+	const databases = (result.data.databases || []).filter(
+		(db: { name: string }) => !isHiddenDb(db.name) && canReadDatabase(ctx, db.name),
+	);
+	const totalSize = databases.reduce(
+		(sum: number, db: { sizeOnDisk?: number }) => sum + (db.sizeOnDisk || 0),
+		0,
+	);
+
+	return { ...result, data: { ...result.data, databases, totalSize } };
 };
 
 export const collectSidebarDatabaseInformation = async () => {
@@ -36,9 +72,10 @@ export const collectSidebarDatabaseInformation = async () => {
 
 	const databasesList = databasesResult.data.databases || [];
 	const collectedDatabaseData: Database[] = [];
+	const ctx = await getAccessContext();
 
 	for (const database of databasesList) {
-		if (['admin', 'local', 'config'].includes(database.name)) {
+		if (isHiddenDb(database.name) || !canReadDatabase(ctx, database.name)) {
 			continue;
 		}
 
@@ -50,11 +87,12 @@ export const collectSidebarDatabaseInformation = async () => {
 			}
 
 			const collections = (await collectionsResult.data.toArray()).filter(
-				col => col.name !== '__mongonaut_init',
+				col => col.name !== '__mongonaut_init' && canReadCollection(ctx, database.name, col.name),
 			);
 
 			const collectionsWithStats = await Promise.all(
 				collections.map(async col => {
+					const canWrite = canWriteResource(ctx, database.name, col.name);
 					try {
 						const statsResult = await mongo.getCollectionStats(database.name, col.name);
 						if (!statsResult.success || !statsResult.data) {
@@ -63,6 +101,7 @@ export const collectSidebarDatabaseInformation = async () => {
 								name: col.name,
 								totalSize: 0,
 								documentCount: 0,
+								canWrite,
 							};
 						}
 
@@ -71,6 +110,7 @@ export const collectSidebarDatabaseInformation = async () => {
 							name: col.name,
 							totalSize: stats.size || 0,
 							documentCount: stats.count || 0,
+							canWrite,
 						};
 					} catch (error) {
 						console.error(`Error getting stats for ${col.name}:`, error);
@@ -87,6 +127,7 @@ export const collectSidebarDatabaseInformation = async () => {
 				name: database.name,
 				collections: collectionsWithStats,
 				totalSize: database.sizeOnDisk || 0,
+				canWrite: canWriteResource(ctx, database.name),
 			});
 		} catch (error) {
 			console.error(`Error processing database ${database.name}:`, error);
@@ -98,16 +139,31 @@ export const collectSidebarDatabaseInformation = async () => {
 };
 
 export const getDatabaseCollection = async (name: string) => {
+	const guard = await guardAccess({ database: name });
+	if (guard) return undefined;
+
 	const result = await mongo.getDatabaseCollections(name);
-	return result.data;
+	if (!result.data) return result.data;
+
+	const ctx = await getAccessContext();
+	const collections = (await result.data.toArray()).filter(
+		col => col.name !== '__mongonaut_init' && canReadCollection(ctx, name, col.name),
+	);
+	return collections;
 };
 
 export const getDatabaseCollectionStats = async (database: string, collection: string) => {
+	const guard = await guardAccess({ database, collection });
+	if (guard) return undefined;
+
 	const result = await mongo.getCollectionStats(database, collection);
 	return result.data;
 };
 
 export const isDatabaseCollectionExisting = async (database: string, collection: string) => {
+	const ctx = await getAccessContext();
+	if (!canReadCollection(ctx, database, collection)) return false;
+
 	const result = await mongo.isCollectionExisting(database, collection);
 	return result.exists;
 };
@@ -118,6 +174,9 @@ export const getDatabaseCollectionContent = async (
 	page: number = 1,
 	pageSize: number = 10,
 ) => {
+	const guard = await guardAccess({ database, collection });
+	if (guard) return { documents: [], pagination: emptyPagination(pageSize) };
+
 	const result = await mongo.getCollectionContent(database, collection, page, pageSize);
 
 	return {
@@ -130,6 +189,9 @@ export const getDatabaseCollectionAllDocumentsJson = async (
 	database: string,
 	collection: string,
 ) => {
+	const guard = await guardAccess({ database, collection });
+	if (guard) return { ...guard, json: '[]' };
+
 	const result = await mongo.getAllDocuments(database, collection);
 
 	return {
@@ -154,6 +216,9 @@ export const findInCollection = async (
 	page: number = 1,
 	pageSize: number = 10,
 ) => {
+	const guard = await guardAccess({ database, collection });
+	if (guard) return { ...guard, documents: [], pagination: emptyPagination(pageSize) };
+
 	let filter: Filter<Document>;
 	let sort: Sort;
 	try {
@@ -201,6 +266,9 @@ export const aggregateInCollection = async (
 		};
 	}
 
+	const guard = await guardAggregation(database, collection, pipeline);
+	if (guard) return { ...guard, documents: [], pagination: emptyPagination(pageSize) };
+
 	const result = await mongo.aggregateInCollection(database, collection, pipeline, page, pageSize);
 
 	return {
@@ -214,6 +282,8 @@ export const aggregateInCollection = async (
 export const deleteDocument = async (database: string, collection: string, documentId: string) => {
 	const guard = assertWritable();
 	if (guard) return { ...guard, deleted: false };
+	const access = await guardAccess({ database, collection, write: true });
+	if (access) return { ...access, deleted: false };
 
 	const result = await mongo.deleteDocument(database, collection, documentId);
 
@@ -227,6 +297,8 @@ export const deleteDocument = async (database: string, collection: string, docum
 export const deleteAllDocuments = async (database: string, collection: string) => {
 	const guard = assertWritable();
 	if (guard) return { ...guard, deletedCount: 0 };
+	const access = await guardAccess({ database, collection, write: true });
+	if (access) return { ...access, deletedCount: 0 };
 
 	const result = await mongo.deleteAllDocuments(database, collection);
 
@@ -240,6 +312,8 @@ export const deleteAllDocuments = async (database: string, collection: string) =
 export const addDocument = async (database: string, collection: string, documentJson: string) => {
 	const guard = assertWritable();
 	if (guard) return { ...guard, insertedId: null };
+	const access = await guardAccess({ database, collection, write: true });
+	if (access) return { ...access, insertedId: null };
 
 	try {
 		const document = JSON.parse(documentJson);
@@ -267,6 +341,8 @@ export const updateDocument = async (
 ) => {
 	const guard = assertWritable();
 	if (guard) return { ...guard, updated: false };
+	const access = await guardAccess({ database, collection, write: true });
+	if (access) return { ...access, updated: false };
 
 	const result = await mongo.updateDocument(database, collection, documentId, updatedDocument);
 
@@ -280,6 +356,8 @@ export const updateDocument = async (
 export const createCollection = async (database: string, collection: string) => {
 	const guard = assertWritable();
 	if (guard) return guard;
+	const access = await guardAccess({ database, write: true });
+	if (access) return access;
 
 	return await mongo.createCollection(database, collection);
 };
@@ -287,16 +365,21 @@ export const createCollection = async (database: string, collection: string) => 
 export const createDatabase = async (database: string) => {
 	const guard = assertWritable();
 	if (guard) return guard;
+	const admin = await requireAdmin();
+	if (admin) return admin;
+	if (isHiddenDb(database) || database === INTERNAL_DB) {
+		return { success: false, error: new Error('Reserved database name') };
+	}
 
-	// MongoDB creates a database on first write, so we create a dummy collection
 	const dummyCollection = '__mongonaut_init';
-	// We don't drop the collection, otherwise the DB would be dropped as well if it's empty
 	return await mongo.createCollection(database, dummyCollection);
 };
 
 export const dropCollection = async (database: string, collection: string) => {
 	const guard = assertWritable();
 	if (guard) return guard;
+	const access = await guardAccess({ database, collection, write: true });
+	if (access) return access;
 
 	return await mongo.dropCollection(database, collection);
 };
@@ -304,6 +387,10 @@ export const dropCollection = async (database: string, collection: string) => {
 export const renameCollection = async (database: string, collection: string, newName: string) => {
 	const guard = assertWritable();
 	if (guard) return guard;
+	const access = await guardAccess({ database, collection, write: true });
+	if (access) return access;
+	const targetAccess = await guardAccess({ database, collection: newName, write: true });
+	if (targetAccess) return targetAccess;
 
 	return await mongo.renameCollection(database, collection, newName);
 };
@@ -315,6 +402,10 @@ export const duplicateCollection = async (
 ) => {
 	const guard = assertWritable();
 	if (guard) return guard;
+	const readAccess = await guardAccess({ database, collection });
+	if (readAccess) return readAccess;
+	const writeAccess = await guardAccess({ database, collection: targetName, write: true });
+	if (writeAccess) return writeAccess;
 
 	return await mongo.duplicateCollection(database, collection, targetName);
 };
@@ -322,6 +413,11 @@ export const duplicateCollection = async (
 export const dropDatabase = async (database: string) => {
 	const guard = assertWritable();
 	if (guard) return guard;
+	const admin = await requireAdmin();
+	if (admin) return admin;
+	if (isHiddenDb(database)) {
+		return { success: false, error: new Error('Reserved database name') };
+	}
 
 	return await mongo.dropDatabase(database);
 };

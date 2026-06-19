@@ -8,12 +8,14 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "eslint .",
+		"recovery": "node scripts/recovery.mjs",
 		"test:format": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,scss}\"",
 		"format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss}\""
 	},
 	"packageManager": "pnpm@11.7.0",
 	"dependencies": {
 		"@codemirror/lang-json": "^6.0.2",
+		"@node-rs/argon2": "^2.0.2",
 		"@radix-ui/react-alert-dialog": "^1.1.17",
 		"@radix-ui/react-collapsible": "^1.1.14",
 		"@radix-ui/react-context-menu": "^2.3.1",

@@ -46,6 +46,7 @@ export function LoginCard({ mode, misconfigured, next, error }: LoginCardProps) 
 						{misconfigured && <MisconfiguredNotice mode={mode} />}
 
 						{!misconfigured && mode === 'STATIC_PASSWORD' && <PasswordForm next={next} />}
+						{!misconfigured && mode === 'ACCOUNT' && <AccountForm next={next} />}
 						{!misconfigured && mode === 'OIDC' && <OidcLaunch next={next} />}
 					</CardContent>
 				</Card>
@@ -119,6 +120,108 @@ function PasswordForm({ next }: { next: string }) {
 	);
 }
 
+function AccountForm({ next }: { next: string }) {
+	const [email, setEmail] = useState('');
+	const [password, setPassword] = useState('');
+	const [submitting, setSubmitting] = useState(false);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+	const [showHelp, setShowHelp] = useState(false);
+
+	const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		if (submitting) return;
+		setSubmitting(true);
+		setErrorMessage(null);
+		try {
+			const url = `/api/auth/login?next=${encodeURIComponent(next)}`;
+			const res = await fetch(url, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email, password }),
+			});
+			const data = (await res.json().catch(() => ({}))) as {
+				ok?: boolean;
+				error?: string;
+				redirect?: string;
+			};
+			if (!res.ok || !data.ok) {
+				setErrorMessage(data.error || 'Login failed.');
+				setSubmitting(false);
+				return;
+			}
+			window.location.href = data.redirect || next || '/';
+		} catch (err) {
+			setErrorMessage(err instanceof Error ? err.message : 'Network error.');
+			setSubmitting(false);
+		}
+	};
+
+	return (
+		<form className="flex flex-col gap-4" onSubmit={onSubmit}>
+			<div className="flex flex-col gap-2">
+				<label htmlFor="email" className="text-sm font-medium">
+					Email
+				</label>
+				<Input
+					id="email"
+					type="email"
+					autoComplete="username"
+					autoFocus
+					value={email}
+					onChange={e => setEmail(e.target.value)}
+					placeholder="you@example.com"
+					disabled={submitting}
+				/>
+			</div>
+			<div className="flex flex-col gap-2">
+				<label htmlFor="password" className="text-sm font-medium">
+					Password
+				</label>
+				<Input
+					id="password"
+					type="password"
+					autoComplete="current-password"
+					value={password}
+					onChange={e => setPassword(e.target.value)}
+					placeholder="Enter your password"
+					disabled={submitting}
+				/>
+			</div>
+
+			{errorMessage && <Notice>{errorMessage}</Notice>}
+
+			<Button
+				type="submit"
+				disabled={submitting || email.length === 0 || password.length === 0}
+				className="w-full bg-[#FFB211] text-black hover:bg-[#E5A010]"
+			>
+				{submitting ? 'Signing in…' : 'Sign in'}
+			</Button>
+
+			<div className="flex flex-col gap-2">
+				<button
+					type="button"
+					onClick={() => setShowHelp(v => !v)}
+					className="text-muted-foreground hover:text-foreground self-start text-xs underline underline-offset-2"
+				>
+					Forgot your password?
+				</button>
+				{showHelp && (
+					<div className="text-muted-foreground bg-muted/40 rounded-md border p-3 text-xs leading-relaxed">
+						On the server, run{' '}
+						<code className="bg-background rounded px-1 py-0.5 font-mono">
+							pnpm recovery {email || 'your@email.com'}
+						</code>{' '}
+						to print a temporary password to the console. Sign in with that temporary password above
+						and you will be asked to set a new one. Your existing password keeps working until you
+						do.
+					</div>
+				)}
+			</div>
+		</form>
+	);
+}
+
 function OidcLaunch({ next }: { next: string }) {
 	const href = `/api/auth/oidc/start?next=${encodeURIComponent(next)}`;
 	return (
@@ -145,14 +248,19 @@ function Notice({ children }: { children: React.ReactNode }) {
 }
 
 function MisconfiguredNotice({ mode }: { mode: AuthMode }) {
+	let detail: string;
+	if (mode === 'STATIC_PASSWORD') {
+		detail = 'MONGONAUT_AUTH_SECRET and MONGONAUT_AUTH_PASSWORD must both be set.';
+	} else if (mode === 'ACCOUNT') {
+		detail = 'MONGONAUT_AUTH_SECRET must be set when MONGONAUT_AUTH_MODE=ACCOUNT.';
+	} else {
+		detail =
+			'MONGONAUT_AUTH_SECRET, MONGONAUT_OIDC_ISSUER, MONGONAUT_OIDC_CLIENT_ID and MONGONAUT_OIDC_CLIENT_SECRET must all be set.';
+	}
 	return (
 		<Notice>
 			<p className="font-medium">Authentication is misconfigured.</p>
-			<p>
-				{mode === 'STATIC_PASSWORD'
-					? 'MONGONAUT_AUTH_SECRET and MONGONAUT_AUTH_PASSWORD must both be set.'
-					: 'MONGONAUT_AUTH_SECRET, MONGONAUT_OIDC_ISSUER, MONGONAUT_OIDC_CLIENT_ID and MONGONAUT_OIDC_CLIENT_SECRET must all be set.'}
-			</p>
+			<p>{detail}</p>
 			<p>Check your container environment variables and restart Mongonaut.</p>
 		</Notice>
 	);

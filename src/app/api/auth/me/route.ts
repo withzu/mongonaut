@@ -24,6 +24,7 @@ export async function GET(req: NextRequest) {
 	return NextResponse.json({
 		...info,
 		authenticated: true,
+		mustChangePassword: !!session.recovery,
 		user: {
 			subject: session.sub,
 			mode: session.mode,

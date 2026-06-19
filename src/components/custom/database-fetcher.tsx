@@ -5,10 +5,17 @@ import { Document } from 'mongodb';
 import {
 	collectSidebarDatabaseInformation,
 	getServerInfo,
+	getViewerInfo,
 	listDatabases,
 } from '@/actions/databaseOperation';
 import { DatabaseContent } from '@/components/custom/database-content';
 import { Database } from '@/lib/types/mongo';
+
+interface ViewerInfo {
+	isAccountAdmin: boolean;
+	canCreateDatabase: boolean;
+	globalReadonly: boolean;
+}
 
 interface DatabaseFetcherProps {
 	children: ReactNode;
@@ -41,17 +48,21 @@ export function DatabaseFetcher({ children }: DatabaseFetcherProps) {
 	const [databases, setDatabases] = useState<Database[]>([]);
 	const [totalSize, setTotalSize] = useState<number | undefined>(undefined);
 	const [serverInfo, setServerInfo] = useState<Document | undefined>(undefined);
+	const [viewer, setViewer] = useState<ViewerInfo | undefined>(undefined);
 	const [error, setError] = useState<Error | undefined>(undefined);
 	const [initialLoading, setInitialLoading] = useState(true);
 	const [isPending, startTransition] = useTransition();
 
 	const fetchAllData = async () => {
 		try {
-			const [databasesResult, dbListResult, serverInfoResult] = await Promise.all([
+			const [databasesResult, dbListResult, serverInfoResult, viewerResult] = await Promise.all([
 				collectSidebarDatabaseInformation(),
 				listDatabases() as Promise<ActionResult<DbListData>>,
 				getServerInfo(),
+				getViewerInfo(),
 			]);
+
+			setViewer(viewerResult);
 
 			if (databasesResult.success && databasesResult.data) {
 				setDatabases(databasesResult.data);
@@ -98,6 +109,9 @@ export function DatabaseFetcher({ children }: DatabaseFetcherProps) {
 				databases={databases}
 				totalSize={totalSize}
 				serverInfo={serverInfo}
+				isAccountAdmin={viewer?.isAccountAdmin ?? false}
+				canCreateDatabase={viewer?.canCreateDatabase ?? false}
+				globalReadonly={viewer?.globalReadonly ?? false}
 				error={error}
 				loading={isLoading}
 			>

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthConfig } from '@/lib/auth/config';
 import { readSessionToken, SESSION_COOKIE } from '@/lib/auth/session';
 
-const PUBLIC_PREFIXES = ['/login', '/api/auth/'];
+const PUBLIC_PREFIXES = ['/login', '/setup', '/api/auth/'];
 const PUBLIC_FILES = ['/favicon.ico', '/robots.txt'];
 
 function isPublic(pathname: string): boolean {

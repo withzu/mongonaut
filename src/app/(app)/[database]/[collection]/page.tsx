@@ -24,7 +24,7 @@ import {
 	getDatabaseCollectionStats,
 	isDatabaseCollectionExisting,
 } from '@/actions/databaseOperation';
-import { envBool } from '@/lib/env';
+import { getResourcePermissions } from '@/lib/auth/server';
 import { DocumentView } from '@/components/custom/document-view';
 import { QueryPanel } from '@/components/custom/query-panel';
 import { CollectionActionsMenu } from '@/components/custom/collection-actions';
@@ -55,11 +55,16 @@ const CollectionDetailPage: FC<Props> = async ({ params, searchParams }) => {
 	const currentPage = query?.page ? parseInt(query.page) : 1;
 	const pageSize = query?.pageSize ? parseInt(query.pageSize) : 20;
 
+	const { canRead, canWrite } = await getResourcePermissions(database, collection);
+	if (!canRead) {
+		notFound();
+	}
+
 	if (!(await isDatabaseCollectionExisting(database, collection))) {
 		notFound();
 	}
 
-	const isReadonly = envBool('MONGONAUT_READONLY', false);
+	const isReadonly = !canWrite;
 	const stats = await getDatabaseCollectionStats(database, collection);
 
 	const isAggregate = query?.mode === 'aggregate' && !!query?.pipeline;

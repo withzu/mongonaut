@@ -626,4 +626,17 @@ export class MongoController {
 			};
 		}
 	}
+
+	public async ensureConnection() {
+		return this.connect();
+	}
+}
+
+let sharedController: MongoController | null = null;
+
+export function getMongoController(): MongoController {
+	if (!sharedController) {
+		sharedController = new MongoController();
+	}
+	return sharedController;
 }

@@ -1,6 +1,6 @@
 import { env, envInt } from '@/lib/env';
 
-export type AuthMode = 'NONE' | 'STATIC_PASSWORD' | 'OIDC';
+export type AuthMode = 'NONE' | 'STATIC_PASSWORD' | 'OIDC' | 'ACCOUNT';
 
 export interface OidcConfig {
 	issuer: string;
@@ -19,15 +19,16 @@ export interface AuthConfig {
 	oidc: OidcConfig | null;
 }
 
-const VALID_MODES: AuthMode[] = ['NONE', 'STATIC_PASSWORD', 'OIDC'];
+const VALID_MODES: AuthMode[] = ['NONE', 'STATIC_PASSWORD', 'OIDC', 'ACCOUNT'];
 
 function readMode(): AuthMode {
-	const raw = env('MONGONAUT_AUTH_MODE', 'NONE').trim().toUpperCase();
+	const raw = env('MONGONAUT_AUTH_MODE', 'ACCOUNT').trim().toUpperCase();
+	if (!raw) return 'ACCOUNT';
 	if ((VALID_MODES as string[]).includes(raw)) {
 		return raw as AuthMode;
 	}
-	console.warn(`[auth] unknown MONGONAUT_AUTH_MODE "${raw}", falling back to NONE`);
-	return 'NONE';
+	console.warn(`[auth] unknown MONGONAUT_AUTH_MODE "${raw}", falling back to ACCOUNT`);
+	return 'ACCOUNT';
 }
 
 function readOidc(): OidcConfig | null {

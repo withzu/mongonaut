@@ -11,12 +11,14 @@ export interface Collection {
 	name: string;
 	totalSize: number;
 	documentCount: number;
+	canWrite?: boolean;
 }
 
 export interface Database {
 	name: string;
 	collections: Collection[];
 	totalSize: number;
+	canWrite?: boolean;
 }
 
 export interface CollectionStats {

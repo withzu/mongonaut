@@ -30,6 +30,7 @@ interface DatabaseContextMenuProps {
 	database: string;
 	databases: Database[];
 	readOnly?: boolean;
+	canDropDatabase?: boolean;
 	children: ReactNode;
 }
 
@@ -37,6 +38,7 @@ export function DatabaseContextMenu({
 	database,
 	databases,
 	readOnly,
+	canDropDatabase,
 	children,
 }: DatabaseContextMenuProps) {
 	const router = useRouter();
@@ -47,7 +49,7 @@ export function DatabaseContextMenu({
 	const [showDropDialog, setShowDropDialog] = useState(false);
 	const [isBusy, setIsBusy] = useState(false);
 
-	if (readOnly) {
+	if (readOnly && !canDropDatabase) {
 		return <>{children}</>;
 	}
 
@@ -79,19 +81,25 @@ export function DatabaseContextMenu({
 			<ContextMenu modal={false}>
 				<ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
 				<ContextMenuContent className="w-52">
-					<ContextMenuItem onSelect={() => setShowCreate(true)} disabled={isBusy}>
-						<FilePlusIcon />
-						Create collection…
-					</ContextMenuItem>
-					<ContextMenuSeparator />
-					<ContextMenuItem
-						variant="destructive"
-						onSelect={() => setShowDropDialog(true)}
-						disabled={isBusy}
-					>
-						<Trash2Icon />
-						Drop database
-					</ContextMenuItem>
+					{!readOnly && (
+						<ContextMenuItem onSelect={() => setShowCreate(true)} disabled={isBusy}>
+							<FilePlusIcon />
+							Create collection…
+						</ContextMenuItem>
+					)}
+					{canDropDatabase && (
+						<>
+							{!readOnly && <ContextMenuSeparator />}
+							<ContextMenuItem
+								variant="destructive"
+								onSelect={() => setShowDropDialog(true)}
+								disabled={isBusy}
+							>
+								<Trash2Icon />
+								Drop database
+							</ContextMenuItem>
+						</>
+					)}
 				</ContextMenuContent>
 			</ContextMenu>
 

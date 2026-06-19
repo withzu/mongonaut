@@ -2,10 +2,11 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { InfoIcon, LogOutIcon, MoonIcon, SunIcon } from 'lucide-react';
+import { InfoIcon, KeyRoundIcon, LogOutIcon, MoonIcon, SettingsIcon, SunIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import type { AuthMode } from '@/lib/auth/config';
 import { Button } from '@/components/ui/button';
+import { ChangePasswordDialog } from '@/components/custom/change-password-dialog';
 import { cn, usePreferredTheme } from '@/lib/utils';
 
 interface AuthMeResponse {
@@ -68,8 +69,15 @@ function ThemeToggleButton({
 	);
 }
 
-export function SidebarFooterActions({ readOnly }: { readOnly?: boolean }) {
+export function SidebarFooterActions({
+	readOnly,
+	isAccountAdmin,
+}: {
+	readOnly?: boolean;
+	isAccountAdmin?: boolean;
+}) {
 	const [auth, setAuth] = useState<AuthMeResponse | null>(null);
+	const [showChangePassword, setShowChangePassword] = useState(false);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -87,6 +95,7 @@ export function SidebarFooterActions({ readOnly }: { readOnly?: boolean }) {
 	}, []);
 
 	const showLogout = !!auth?.enabled && !!auth.authenticated;
+	const canChangeOwnPassword = auth?.mode === 'ACCOUNT' && !!auth.authenticated;
 	const userLabel = auth?.user?.name || auth?.user?.email || undefined;
 
 	return (
@@ -114,11 +123,30 @@ export function SidebarFooterActions({ readOnly }: { readOnly?: boolean }) {
 					</span>
 				)}
 
+				{isAccountAdmin && (
+					<Link href="/admin">
+						<Button size="icon" variant="ghost" aria-label="Accounts & settings">
+							<SettingsIcon size={18} />
+						</Button>
+					</Link>
+				)}
+
 				<Link href="/about">
 					<Button size="icon" variant="ghost" aria-label="About">
 						<InfoIcon size={18} />
 					</Button>
 				</Link>
+
+				{canChangeOwnPassword && (
+					<Button
+						size="icon"
+						variant="ghost"
+						aria-label="Change password"
+						onClick={() => setShowChangePassword(true)}
+					>
+						<KeyRoundIcon size={18} />
+					</Button>
+				)}
 
 				{showLogout && (
 					<form method="POST" action="/api/auth/logout" className="contents">
@@ -136,6 +164,8 @@ export function SidebarFooterActions({ readOnly }: { readOnly?: boolean }) {
 
 				<ThemeToggle />
 			</div>
+
+			<ChangePasswordDialog open={showChangePassword} onOpenChange={setShowChangePassword} />
 		</div>
 	);
 }

@@ -50,11 +50,13 @@ interface AppSidebarProps {
 	databases: Database[];
 	totalSize?: number;
 	serverInfo?: Document;
-	readOnly?: boolean;
+	isAccountAdmin?: boolean;
+	canCreateDatabase?: boolean;
+	globalReadonly?: boolean;
 	loading?: boolean;
 }
 
-function MobileHeader({ readOnly }: { readOnly?: boolean }) {
+function MobileHeader({ globalReadonly }: { globalReadonly?: boolean }) {
 	return (
 		<div className="flex items-center h-14 px-4 backdrop-blur-sm bg-background/80 border-b">
 			<SidebarTrigger>
@@ -75,7 +77,7 @@ function MobileHeader({ readOnly }: { readOnly?: boolean }) {
 				<span className="font-bold">Mongonaut</span>
 			</div>
 
-			{readOnly && (
+			{globalReadonly && (
 				<span className="text-primary-foreground rounded-full text-xs bg-primary px-2.5 py-0.5">
 					Read-only
 				</span>
@@ -122,7 +124,9 @@ export function AppSidebar({
 	databases,
 	totalSize,
 	serverInfo,
-	readOnly,
+	isAccountAdmin = false,
+	canCreateDatabase = false,
+	globalReadonly = false,
 	loading = false,
 }: AppSidebarProps) {
 	const [search, setSearch] = useState('');
@@ -154,7 +158,7 @@ export function AppSidebar({
 		<>
 			<div className="fixed top-0 left-0 right-0 z-50 md:hidden">
 				<div className="flex flex-col">
-					<MobileHeader readOnly={readOnly} />
+					<MobileHeader globalReadonly={globalReadonly} />
 
 					<div className="flex items-center h-12 px-4 backdrop-blur-sm bg-background/80 border-b">
 						<div className="w-full overflow-x-auto no-scrollbar">
@@ -197,7 +201,7 @@ export function AppSidebar({
 					<SidebarGroup>
 						<SidebarGroupLabel className="flex justify-between items-center">
 							Databases
-							{!readOnly && (
+							{canCreateDatabase && (
 								<Button
 									variant="ghost"
 									size="icon"
@@ -223,7 +227,7 @@ export function AppSidebar({
 											database={database}
 											databases={databases}
 											search={search}
-											readOnly={readOnly}
+											canCreateDatabase={canCreateDatabase}
 											open={isTableOpen(database.name) || search.trim().length > 0}
 											onOpenChangeAction={() => toggleTable(database.name)}
 										/>
@@ -258,7 +262,7 @@ export function AppSidebar({
 						</div>
 					)}
 
-					<SidebarFooterActions readOnly={readOnly} />
+					<SidebarFooterActions readOnly={globalReadonly} isAccountAdmin={isAccountAdmin} />
 				</SidebarFooter>
 			</Sidebar>
 
@@ -271,14 +275,14 @@ export function CollapsibleDatabaseSidebarItem({
 	database,
 	databases,
 	search,
-	readOnly,
+	canCreateDatabase,
 	open,
 	onOpenChangeAction,
 }: {
 	database: Database;
 	databases: Database[];
 	search: string;
-	readOnly?: boolean;
+	canCreateDatabase?: boolean;
 	open?: boolean;
 	onOpenChangeAction?: (open: boolean) => void;
 }) {
@@ -303,7 +307,12 @@ export function CollapsibleDatabaseSidebarItem({
 				onOpenChange={onOpenChangeAction}
 				className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
 			>
-				<DatabaseContextMenu database={database.name} databases={databases} readOnly={readOnly}>
+				<DatabaseContextMenu
+					database={database.name}
+					databases={databases}
+					readOnly={!database.canWrite}
+					canDropDatabase={canCreateDatabase}
+				>
 					<CollapsibleTrigger asChild>
 						<SidebarMenuButton className="font-medium">
 							<ChevronRightIcon className="text-muted-foreground transition-transform" />
@@ -325,7 +334,7 @@ export function CollapsibleDatabaseSidebarItem({
 									key={collection.name}
 									database={database.name}
 									collection={collection.name}
-									readOnly={readOnly}
+									readOnly={!collection.canWrite}
 								>
 									<SidebarMenuButton
 										isActive={isActive}

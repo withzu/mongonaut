@@ -11,6 +11,8 @@ export interface SessionPayload {
 	exp: number;
 	email?: string;
 	name?: string;
+	ver?: number;
+	recovery?: boolean;
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -79,7 +81,7 @@ export async function createSessionToken(
 	mode: AuthMode,
 	subject: string,
 	ttlSeconds: number,
-	extra?: { email?: string; name?: string },
+	extra?: { email?: string; name?: string; ver?: number; recovery?: boolean },
 ): Promise<{ token: string; payload: SessionPayload }> {
 	const now = Math.floor(Date.now() / 1000);
 	const payload: SessionPayload = {
@@ -89,6 +91,8 @@ export async function createSessionToken(
 		exp: now + ttlSeconds,
 		...(extra?.email ? { email: extra.email } : {}),
 		...(extra?.name ? { name: extra.name } : {}),
+		...(typeof extra?.ver === 'number' ? { ver: extra.ver } : {}),
+		...(extra?.recovery ? { recovery: true } : {}),
 	};
 	const token = await signPayload(secret, payload);
 	return { token, payload };
