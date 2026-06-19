@@ -8,6 +8,7 @@ import { JsonEditorProps as LibJsonEditorProps, UpdateFunction } from 'json-edit
 import { Button } from '@/components/ui/button';
 import { ClientJsonEditor } from '@/components/custom/client-json-editor';
 import { deleteDocument, updateDocument } from '@/actions/databaseOperation';
+import type { MongoDocument } from '@/lib/types/mongo';
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -20,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 interface JsonDocument {
-	_id: string | { $oid: string };
+	_id?: string | { $oid: string };
 	[key: string]: unknown;
 }
 
@@ -55,14 +56,19 @@ export function DocumentView({ data, isReadonly }: { data: string; isReadonly: b
 	const originalDocument = useMemo<JsonDocument>(() => JSON.parse(data), [data]);
 	const [currentDocument, setCurrentDocument] = useState<JsonDocument>(originalDocument);
 	const documentId = useMemo(() => {
+		if (originalDocument._id == null) return undefined;
 		if (typeof originalDocument._id === 'object' && '$oid' in originalDocument._id) {
 			return originalDocument._id.$oid;
 		}
 		return originalDocument._id as string;
 	}, [originalDocument]);
 
+	// Aggregation results may not carry a real _id (e.g. after $group/$project);
+	// such documents can't be written back, so they are shown read-only.
+	const isEditable = !isReadonly && documentId !== undefined;
+
 	const handleDelete = async () => {
-		if (!documentId || isReadonly) return;
+		if (!documentId || !isEditable) return;
 
 		setIsDeleting(true);
 		try {
@@ -130,11 +136,11 @@ export function DocumentView({ data, isReadonly }: { data: string; isReadonly: b
 	}, []);
 
 	const handleSave = async () => {
-		if (!documentId || isReadonly) return;
+		if (!documentId || !isEditable) return;
 
 		setIsSaving(true);
 		try {
-			const documentToSave: JsonDocument = {
+			const documentToSave: MongoDocument = {
 				...currentDocument,
 				_id: documentId,
 			};
@@ -163,7 +169,7 @@ export function DocumentView({ data, isReadonly }: { data: string; isReadonly: b
 
 	return (
 		<div className="border rounded-lg relative overflow-hidden w-full">
-			{!isReadonly && (
+			{isEditable && (
 				<div className="absolute top-2 right-2 z-10 flex gap-1">
 					<Button
 						variant="ghost"
@@ -191,9 +197,9 @@ export function DocumentView({ data, isReadonly }: { data: string; isReadonly: b
 			<MemoizedJsonEditor
 				className="w-full h-full overflow-scroll bg-background! !dark:border-[#242424]"
 				data={currentDocument}
-				restrictAdd={isReadonly}
-				restrictDelete={isReadonly}
-				restrictEdit={isReadonly}
+				restrictAdd={!isEditable}
+				restrictDelete={!isEditable}
+				restrictEdit={!isEditable}
 				collapse={1}
 				onUpdate={handleDocumentUpdate}
 			/>

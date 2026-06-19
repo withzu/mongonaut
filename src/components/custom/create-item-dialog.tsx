@@ -31,6 +31,7 @@ interface CreateItemDialogProps {
 	onOpenChange: (open: boolean) => void;
 	databases: Database[];
 	initialItemType?: ItemType;
+	initialDb?: string;
 }
 
 export function CreateItemDialog({
@@ -38,12 +39,13 @@ export function CreateItemDialog({
 	onOpenChange,
 	databases,
 	initialItemType = 'database',
+	initialDb = '',
 }: CreateItemDialogProps) {
 	const { reloadData } = useDatabaseFetcher();
 	const [selectedItemType, setSelectedItemType] = useState<ItemType>(initialItemType);
 	const [dbName, setDbName] = useState('');
 	const [collectionName, setCollectionName] = useState('');
-	const [selectedDb, setSelectedDb] = useState('');
+	const [selectedDb, setSelectedDb] = useState(initialDb);
 	const [isCreating, setIsCreating] = useState(false);
 
 	const itemType: ItemType = databases.length === 0 ? 'database' : selectedItemType;

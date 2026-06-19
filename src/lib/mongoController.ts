@@ -1,4 +1,4 @@
-import { MongoClient, MongoError, ObjectId } from 'mongodb';
+import { Document, Filter, MongoClient, MongoError, ObjectId, Sort } from 'mongodb';
 import { CollectionStats, DatabaseStats, MongoDocument } from '@/lib/types/mongo';
 import { env, envInt } from '@/lib/env';
 import { MongoConnectionError } from '@/lib/errors/mongo';
@@ -232,11 +232,11 @@ export class MongoController {
 		}
 	}
 
-	public async searchInCollection(
+	public async findInCollection(
 		dbName: string,
 		collectionName: string,
-		searchKey: string,
-		searchValue: string,
+		filter: Filter<Document>,
+		sort: Sort,
 		page: number = 1,
 		pageSize: number = 10,
 	) {
@@ -258,31 +258,15 @@ export class MongoController {
 		const db = this.client.db(dbName);
 		const collection = db.collection(collectionName);
 
-		const formattedKey = searchKey.replace(/_/g, '.');
-
-		let query;
-
-		const numberValue = Number(searchValue);
-		if (!isNaN(numberValue)) {
-			query = { [formattedKey]: numberValue };
-		} else if (searchValue.toLowerCase() === 'true') {
-			query = { [formattedKey]: true };
-		} else if (searchValue.toLowerCase() === 'false') {
-			query = { [formattedKey]: false };
-		} else {
-			query = {
-				[formattedKey]: {
-					$regex: searchValue,
-					$options: 'i',
-				},
-			};
-		}
-
 		const skip = (page - 1) * pageSize;
 
 		try {
-			const total = await collection.countDocuments(query);
-			const documents = await collection.find(query).skip(skip).limit(pageSize).toArray();
+			const total = await collection.countDocuments(filter);
+			const cursor = collection.find(filter);
+			if (sort && Object.keys(sort).length > 0) {
+				cursor.sort(sort);
+			}
+			const documents = await cursor.skip(skip).limit(pageSize).toArray();
 
 			return {
 				success: true,
@@ -295,7 +279,75 @@ export class MongoController {
 				},
 			};
 		} catch (error) {
-			console.error('Error in collection search:', error);
+			console.error('Error in collection find:', error);
+			return {
+				success: false,
+				error: error instanceof Error ? error : new Error('Unknown error'),
+				documents: [],
+				pagination: {
+					total: 0,
+					page: 1,
+					pageSize,
+					totalPages: 0,
+				},
+			};
+		}
+	}
+
+	public async aggregateInCollection(
+		dbName: string,
+		collectionName: string,
+		pipeline: Document[],
+		page: number = 1,
+		pageSize: number = 10,
+	) {
+		const connectResult = await this.connect();
+		if (!connectResult.success) {
+			return {
+				success: false,
+				error: connectResult.error,
+				documents: [],
+				pagination: {
+					total: 0,
+					page: 1,
+					pageSize,
+					totalPages: 0,
+				},
+			};
+		}
+
+		const db = this.client.db(dbName);
+		const collection = db.collection(collectionName);
+
+		const skip = (page - 1) * pageSize;
+
+		try {
+			let total = 0;
+			try {
+				const countResult = await collection
+					.aggregate([...pipeline, { $count: 'total' }])
+					.toArray();
+				total = countResult[0]?.total ?? 0;
+			} catch {
+				total = 0;
+			}
+
+			const documents = await collection
+				.aggregate([...pipeline, { $skip: skip }, { $limit: pageSize }])
+				.toArray();
+
+			return {
+				success: true,
+				documents,
+				pagination: {
+					total,
+					page,
+					pageSize,
+					totalPages: total > 0 ? Math.ceil(total / pageSize) : 0,
+				},
+			};
+		} catch (error) {
+			console.error('Error in collection aggregation:', error);
 			return {
 				success: false,
 				error: error instanceof Error ? error : new Error('Unknown error'),
@@ -486,6 +538,92 @@ export class MongoController {
 			return { success: true };
 		} catch (error) {
 			return { success: false, error };
+		}
+	}
+
+	public async dropCollection(dbName: string, collectionName: string) {
+		const connectResult = await this.connect();
+		if (!connectResult.success) {
+			return { success: false, error: connectResult.error };
+		}
+		try {
+			const db = this.client.db(dbName);
+			await db.collection(collectionName).drop();
+			return { success: true };
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error : new Error('Unknown error'),
+			};
+		}
+	}
+
+	public async renameCollection(dbName: string, collectionName: string, newName: string) {
+		const connectResult = await this.connect();
+		if (!connectResult.success) {
+			return { success: false, error: connectResult.error };
+		}
+		try {
+			const db = this.client.db(dbName);
+			await db.renameCollection(collectionName, newName);
+			return { success: true };
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error : new Error('Unknown error'),
+			};
+		}
+	}
+
+	public async duplicateCollection(dbName: string, sourceName: string, targetName: string) {
+		const connectResult = await this.connect();
+		if (!connectResult.success) {
+			return { success: false, error: connectResult.error };
+		}
+		try {
+			const db = this.client.db(dbName);
+			const source = db.collection(sourceName);
+
+			// Copy all documents into the new collection. $out creates the target
+			// collection (and replaces it if it already exists).
+			await source.aggregate([{ $match: {} }, { $out: targetName }]).toArray();
+
+			// Recreate indexes (except the default _id index, which always exists).
+			const indexes = await source.listIndexes().toArray();
+			const target = db.collection(targetName);
+			for (const index of indexes) {
+				if (index.name === '_id_') continue;
+				const { key, name, v, ...options } = index;
+				void v;
+				try {
+					await target.createIndex(key, { name, ...options });
+				} catch (indexError) {
+					console.warn(`Could not recreate index ${name} on ${targetName}:`, indexError);
+				}
+			}
+
+			return { success: true };
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error : new Error('Unknown error'),
+			};
+		}
+	}
+
+	public async dropDatabase(dbName: string) {
+		const connectResult = await this.connect();
+		if (!connectResult.success) {
+			return { success: false, error: connectResult.error };
+		}
+		try {
+			await this.client.db(dbName).dropDatabase();
+			return { success: true };
+		} catch (error) {
+			return {
+				success: false,
+				error: error instanceof Error ? error : new Error('Unknown error'),
+			};
 		}
 	}
 }

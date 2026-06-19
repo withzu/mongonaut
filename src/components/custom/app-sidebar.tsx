@@ -43,6 +43,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { CreateItemDialog } from '@/components/custom/create-item-dialog';
 import { SidebarFooterActions } from '@/components/custom/sidebar-footer-actions';
+import { CollectionContextMenu } from '@/components/custom/collection-actions';
+import { DatabaseContextMenu } from '@/components/custom/database-context-menu';
 import { cn } from '@/lib/utils';
 
 interface AppSidebarProps {
@@ -222,7 +224,9 @@ export function AppSidebar({
 										<CollapsibleDatabaseSidebarItem
 											key={database.name}
 											database={database}
+											databases={databases}
 											search={search}
+											readOnly={readOnly}
 											open={isTableOpen(database.name) || search.trim().length > 0}
 											onOpenChangeAction={() => toggleTable(database.name)}
 										/>
@@ -268,12 +272,16 @@ export function AppSidebar({
 
 export function CollapsibleDatabaseSidebarItem({
 	database,
+	databases,
 	search,
+	readOnly,
 	open,
 	onOpenChangeAction,
 }: {
 	database: Database;
+	databases: Database[];
 	search: string;
+	readOnly?: boolean;
 	open?: boolean;
 	onOpenChangeAction?: (open: boolean) => void;
 }) {
@@ -298,41 +306,49 @@ export function CollapsibleDatabaseSidebarItem({
 				onOpenChange={onOpenChangeAction}
 				className="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
 			>
-				<CollapsibleTrigger asChild>
-					<SidebarMenuButton className="font-medium">
-						<ChevronRightIcon className="text-muted-foreground transition-transform" />
-						<DatabaseIcon className="text-muted-foreground" />
-						<span className="truncate">{database.name}</span>
-						<span className="text-muted-foreground/60 ml-auto text-[11px] tabular-nums">
-							{prettyBytes(database.totalSize)}
-						</span>
-					</SidebarMenuButton>
-				</CollapsibleTrigger>
+				<DatabaseContextMenu database={database.name} databases={databases} readOnly={readOnly}>
+					<CollapsibleTrigger asChild>
+						<SidebarMenuButton className="font-medium">
+							<ChevronRightIcon className="text-muted-foreground transition-transform" />
+							<DatabaseIcon className="text-muted-foreground" />
+							<span className="truncate">{database.name}</span>
+							<span className="text-muted-foreground/60 ml-auto text-[11px] tabular-nums">
+								{prettyBytes(database.totalSize)}
+							</span>
+						</SidebarMenuButton>
+					</CollapsibleTrigger>
+				</DatabaseContextMenu>
 
 				<CollapsibleContent>
 					<SidebarMenuSub>
 						{filteredCollections.map(collection => {
 							const isActive = currentPath === `/${database.name}/${collection.name}`;
 							return (
-								<SidebarMenuButton
+								<CollectionContextMenu
 									key={collection.name}
-									isActive={isActive}
-									onClick={() => router.push(`/${database.name}/${collection.name}`)}
-									className="cursor-pointer"
+									database={database.name}
+									collection={collection.name}
+									readOnly={readOnly}
 								>
-									<TableIcon className={isActive ? '' : 'text-muted-foreground'} />
-									<span className="truncate">{collection.name}</span>
-									<div
-										className={cn(
-											'ml-auto flex shrink-0 items-center gap-1 text-[11px] tabular-nums',
-											isActive ? 'text-sidebar-accent-foreground/75' : 'text-muted-foreground/60',
-										)}
+									<SidebarMenuButton
+										isActive={isActive}
+										onClick={() => router.push(`/${database.name}/${collection.name}`)}
+										className="cursor-pointer"
 									>
-										<span>{collection.documentCount}</span>
-										<span className="opacity-40">/</span>
-										<span>{prettyBytes(collection.totalSize)}</span>
-									</div>
-								</SidebarMenuButton>
+										<TableIcon className={isActive ? '' : 'text-muted-foreground'} />
+										<span className="truncate">{collection.name}</span>
+										<div
+											className={cn(
+												'ml-auto flex shrink-0 items-center gap-1 text-[11px] tabular-nums',
+												isActive ? 'text-sidebar-accent-foreground/75' : 'text-muted-foreground/60',
+											)}
+										>
+											<span>{collection.documentCount}</span>
+											<span className="opacity-40">/</span>
+											<span>{prettyBytes(collection.totalSize)}</span>
+										</div>
+									</SidebarMenuButton>
+								</CollectionContextMenu>
 							);
 						})}
 					</SidebarMenuSub>

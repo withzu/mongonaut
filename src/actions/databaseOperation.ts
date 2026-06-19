@@ -1,9 +1,20 @@
 'use server';
 
+import { BSON, type Document, type Filter, type Sort } from 'mongodb';
+
+const { EJSON } = BSON;
 import { MongoController } from '@/lib/mongoController';
 import { Database, MongoDocument } from '@/lib/types/mongo';
+import { envBool } from '@/lib/env';
 
 const mongo = new MongoController();
+
+function assertWritable(): { success: false; error: Error } | null {
+	if (envBool('MONGONAUT_READONLY', false)) {
+		return { success: false, error: new Error('Mongonaut is running in read-only mode') };
+	}
+	return null;
+}
 
 export const getServerInfo = async () => {
 	return await mongo.getServerInfo();
@@ -128,30 +139,82 @@ export const getDatabaseCollectionAllDocumentsJson = async (
 	};
 };
 
-export const searchInCollection = async (
+const emptyPagination = (pageSize: number) => ({
+	total: 0,
+	page: 1,
+	pageSize,
+	totalPages: 0,
+});
+
+export const findInCollection = async (
 	database: string,
 	collection: string,
-	searchKey: string,
-	searchValue: string,
+	filterJson: string,
+	sortJson: string,
 	page: number = 1,
 	pageSize: number = 10,
 ) => {
-	const result = await mongo.searchInCollection(
-		database,
-		collection,
-		searchKey,
-		searchValue,
-		page,
-		pageSize,
-	);
+	let filter: Filter<Document>;
+	let sort: Sort;
+	try {
+		filter = filterJson ? (EJSON.parse(filterJson, { relaxed: true }) as Filter<Document>) : {};
+		sort = sortJson ? (EJSON.parse(sortJson, { relaxed: true }) as Sort) : {};
+	} catch (error) {
+		return {
+			success: false,
+			documents: [],
+			pagination: emptyPagination(pageSize),
+			error: error instanceof Error ? error : new Error('Invalid query JSON'),
+		};
+	}
+
+	const result = await mongo.findInCollection(database, collection, filter, sort, page, pageSize);
 
 	return {
+		success: result.success,
 		documents: result.documents,
 		pagination: result.pagination,
+		error: result.error,
+	};
+};
+
+export const aggregateInCollection = async (
+	database: string,
+	collection: string,
+	pipelineJson: string,
+	page: number = 1,
+	pageSize: number = 10,
+) => {
+	let pipeline: Document[];
+	try {
+		const parsed = EJSON.parse(pipelineJson, { relaxed: true });
+		if (!Array.isArray(parsed)) {
+			throw new Error('Aggregation pipeline must be a JSON array');
+		}
+		pipeline = parsed as Document[];
+	} catch (error) {
+		return {
+			success: false,
+			documents: [],
+			pagination: emptyPagination(pageSize),
+			error: error instanceof Error ? error : new Error('Invalid pipeline JSON'),
+		};
+	}
+
+	const result = await mongo.aggregateInCollection(database, collection, pipeline, page, pageSize);
+
+	return {
+		success: result.success,
+		documents: result.documents,
+		pagination: result.pagination,
+		error: result.error,
 	};
 };
 
 export const deleteDocument = async (database: string, collection: string, documentId: string) => {
+	const guard = assertWritable();
+	if (guard) return { ...guard, deleted: false };
+
 	const result = await mongo.deleteDocument(database, collection, documentId);
 
 	return {
@@ -162,6 +225,9 @@ export const deleteDocument = async (database: string, collection: string, docum
 };
 
 export const deleteAllDocuments = async (database: string, collection: string) => {
+	const guard = assertWritable();
+	if (guard) return { ...guard, deletedCount: 0 };
+
 	const result = await mongo.deleteAllDocuments(database, collection);
 
 	return {
@@ -172,6 +238,9 @@ export const deleteAllDocuments = async (database: string, collection: string) =
 };
 
 export const addDocument = async (database: string, collection: string, documentJson: string) => {
+	const guard = assertWritable();
+	if (guard) return { ...guard, insertedId: null };
+
 	try {
 		const document = JSON.parse(documentJson);
 		const result = await mongo.addDocument(database, collection, document);
@@ -196,6 +265,9 @@ export const updateDocument = async (
 	documentId: string,
 	updatedDocument: MongoDocument,
 ) => {
+	const guard = assertWritable();
+	if (guard) return { ...guard, updated: false };
+
 	const result = await mongo.updateDocument(database, collection, documentId, updatedDocument);
 
 	return {
@@ -206,12 +278,50 @@ export const updateDocument = async (
 };
 
 export const createCollection = async (database: string, collection: string) => {
+	const guard = assertWritable();
+	if (guard) return guard;
+
 	return await mongo.createCollection(database, collection);
 };
 
 export const createDatabase = async (database: string) => {
+	const guard = assertWritable();
+	if (guard) return guard;
+
 	// MongoDB creates a database on first write, so we create a dummy collection
 	const dummyCollection = '__mongonaut_init';
 	// We don't drop the collection, otherwise the DB would be dropped as well if it's empty
 	return await mongo.createCollection(database, dummyCollection);
+};
+
+export const dropCollection = async (database: string, collection: string) => {
+	const guard = assertWritable();
+	if (guard) return guard;
+
+	return await mongo.dropCollection(database, collection);
+};
+
+export const renameCollection = async (database: string, collection: string, newName: string) => {
+	const guard = assertWritable();
+	if (guard) return guard;
+
+	return await mongo.renameCollection(database, collection, newName);
+};
+
+export const duplicateCollection = async (
+	database: string,
+	collection: string,
+	targetName: string,
+) => {
+	const guard = assertWritable();
+	if (guard) return guard;
+
+	return await mongo.duplicateCollection(database, collection, targetName);
+};
+
+export const dropDatabase = async (database: string) => {
+	const guard = assertWritable();
+	if (guard) return guard;
+
+	return await mongo.dropDatabase(database);
 };
