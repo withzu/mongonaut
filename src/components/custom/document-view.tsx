@@ -1,14 +1,14 @@
 'use client';
 
-import { SaveIcon, TrashIcon } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { PencilIcon, TrashIcon } from 'lucide-react';
+import { memo, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { JsonEditorProps as LibJsonEditorProps, UpdateFunction } from 'json-edit-react';
+import { JsonEditorProps as LibJsonEditorProps } from 'json-edit-react';
 import { Button } from '@/components/ui/button';
 import { ClientJsonEditor } from '@/components/custom/client-json-editor';
-import { deleteDocument, updateDocument } from '@/actions/databaseOperation';
-import type { MongoDocument } from '@/lib/types/mongo';
+import { DocumentEditorDialog } from '@/components/custom/document-editor-dialog';
+import { deleteDocument } from '@/actions/databaseOperation';
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -25,43 +25,30 @@ interface JsonDocument {
 	[key: string]: unknown;
 }
 
-type UpdateEvent = Parameters<UpdateFunction>[0];
-
-interface UpdateResult {
-	success: boolean;
-	updated?: boolean;
-	deleted?: boolean;
-	error?: Error;
-}
-
-interface JsonEditorProps extends Omit<LibJsonEditorProps, 'onUpdate'> {
+interface ReadonlyJsonEditorProps extends LibJsonEditorProps {
 	className?: string;
 	data: JsonDocument;
-	restrictAdd: boolean;
-	restrictDelete: boolean;
-	restrictEdit: boolean;
 	collapse: number;
-	onUpdate: UpdateFunction;
 }
 
-const MemoizedJsonEditor = memo<JsonEditorProps>(ClientJsonEditor);
+const MemoizedJsonEditor = memo<ReadonlyJsonEditorProps>(ClientJsonEditor);
 
 export function DocumentView({ data, isReadonly }: { data: string; isReadonly: boolean }) {
 	const [isDeleting, setIsDeleting] = useState(false);
-	const [isSaving, setIsSaving] = useState(false);
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+	const [showEditor, setShowEditor] = useState(false);
 	const router = useRouter();
 	const params = useParams();
 
-	const originalDocument = useMemo<JsonDocument>(() => JSON.parse(data), [data]);
-	const [currentDocument, setCurrentDocument] = useState<JsonDocument>(originalDocument);
+	const document = useMemo<JsonDocument>(() => JSON.parse(data), [data]);
+	const prettyDocument = useMemo(() => JSON.stringify(document, null, 2), [document]);
 	const documentId = useMemo(() => {
-		if (originalDocument._id == null) return undefined;
-		if (typeof originalDocument._id === 'object' && '$oid' in originalDocument._id) {
-			return originalDocument._id.$oid;
+		if (document._id == null) return undefined;
+		if (typeof document._id === 'object' && '$oid' in document._id) {
+			return document._id.$oid;
 		}
-		return originalDocument._id as string;
-	}, [originalDocument]);
+		return document._id as string;
+	}, [document]);
 
 	// Aggregation results may not carry a real _id (e.g. after $group/$project);
 	// such documents can't be written back, so they are shown read-only.
@@ -93,116 +80,52 @@ export function DocumentView({ data, isReadonly }: { data: string; isReadonly: b
 		}
 	};
 
-	const hasChanges = useMemo(() => {
-		const currentJson = JSON.stringify(currentDocument, null, 2);
-		const originalJson = JSON.stringify(originalDocument, null, 2);
-		return currentJson !== originalJson;
-	}, [currentDocument, originalDocument]);
-
-	useEffect(() => {
-		const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-			if (hasChanges) {
-				event.preventDefault();
-				return '';
-			}
-		};
-
-		if (hasChanges) {
-			window.addEventListener('beforeunload', handleBeforeUnload);
-		}
-
-		return () => {
-			window.removeEventListener('beforeunload', handleBeforeUnload);
-		};
-	}, [hasChanges]);
-
-	const handleDocumentUpdate = useCallback((updateEvent: UpdateEvent) => {
-		if (!updateEvent.path) {
-			const newDocument = updateEvent as unknown as JsonDocument;
-			if ('_id' in newDocument) {
-				setCurrentDocument(newDocument);
-			}
-			return;
-		}
-
-		setCurrentDocument(prevDoc => {
-			const newDoc = { ...prevDoc };
-			if (updateEvent.path?.length === 1) {
-				const key = String(updateEvent.path[0]);
-				newDoc[key] = updateEvent.newValue;
-			}
-			return newDoc;
-		});
-	}, []);
-
-	const handleSave = async () => {
-		if (!documentId || !isEditable) return;
-
-		setIsSaving(true);
-		try {
-			const documentToSave: MongoDocument = {
-				...currentDocument,
-				_id: documentId,
-			};
-
-			const result = (await updateDocument(
-				params.database as string,
-				params.collection as string,
-				documentId,
-				documentToSave,
-			)) as UpdateResult;
-
-			if (result.success && result.updated) {
-				toast.success('Document updated');
-				router.refresh();
-			} else {
-				toast.error('Error updating document');
-				console.error('Update error:', result.error);
-			}
-		} catch (error) {
-			console.error('Error updating document:', error);
-			toast.error('Error updating document');
-		} finally {
-			setIsSaving(false);
-		}
-	};
-
 	return (
-		<div className="border rounded-lg relative overflow-hidden w-full">
+		<div className="border rounded-lg overflow-hidden w-full">
 			{isEditable && (
-				<div className="absolute top-2 right-2 z-10 flex gap-1">
+				<div className="flex items-center justify-end gap-1 border-b bg-muted/30 px-2 py-1">
 					<Button
 						variant="ghost"
-						size="icon"
-						onClick={handleSave}
-						disabled={isSaving || !hasChanges}
-						className="text-muted-foreground hover:text-primary cursor-pointer"
+						size="sm"
+						onClick={() => setShowEditor(true)}
+						className="text-muted-foreground hover:text-primary cursor-pointer h-7 gap-1.5"
 					>
-						<SaveIcon size={16} />
-						<span className="sr-only">Save changes</span>
+						<PencilIcon size={14} />
+						Edit
 					</Button>
 					<Button
 						variant="ghost"
-						size="icon"
+						size="sm"
 						onClick={() => setShowDeleteDialog(true)}
 						disabled={isDeleting}
-						className="text-muted-foreground hover:text-destructive cursor-pointer"
+						className="text-muted-foreground hover:text-destructive cursor-pointer h-7 gap-1.5"
 					>
-						<TrashIcon size={16} />
-						<span className="sr-only">Delete document</span>
+						<TrashIcon size={14} />
+						Delete
 					</Button>
 				</div>
 			)}
 
 			<MemoizedJsonEditor
 				className="w-full h-full overflow-scroll bg-background! !dark:border-[#242424]"
-				data={currentDocument}
-				restrictAdd={!isEditable}
-				restrictDelete={!isEditable}
-				restrictEdit={!isEditable}
+				data={document}
+				restrictAdd
+				restrictDelete
+				restrictEdit
 				collapse={1}
-				onUpdate={handleDocumentUpdate}
 			/>
+
+			{isEditable && (
+				<DocumentEditorDialog
+					mode="edit"
+					open={showEditor}
+					onOpenChange={setShowEditor}
+					database={params.database as string}
+					collection={params.collection as string}
+					initialValue={prettyDocument}
+					documentId={documentId}
+				/>
+			)}
 
 			<AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
 				<AlertDialogContent>
