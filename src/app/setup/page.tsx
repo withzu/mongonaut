@@ -6,8 +6,12 @@ import { SetupCard } from '@/app/setup/setup-card';
 export default async function SetupPage() {
 	const cfg = getAuthConfig();
 
-	if (cfg.mode !== 'ACCOUNT' || !cfg.secret) {
+	if (cfg.mode !== 'ACCOUNT') {
 		notFound();
+	}
+
+	if (!cfg.secret) {
+		redirect('/login');
 	}
 
 	if ((await countAccounts()) > 0) {
