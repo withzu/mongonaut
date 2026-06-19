@@ -6,6 +6,8 @@ import { collectSidebarDatabaseInformation } from '@/actions/databaseOperation';
 import { AppContainer } from '@/components/custom/app-container';
 import { AccountManager, type Namespace } from '@/components/custom/account-manager';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminPage() {
 	const cfg = getAuthConfig();
 	const account = await getCurrentAccount();
