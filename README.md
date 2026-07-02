@@ -35,7 +35,7 @@
 </p>
 
 <p align="center">
-  <img width="1488" alt="Mongonaut interface" src="https://github.com/user-attachments/assets/6915bf94-9b12-42bf-a740-26b4bec16e67" />
+  <img width="2560" height="1436" alt="Mongonaut interface" src="https://github.com/user-attachments/assets/b18b325b-881f-44d8-99b9-ec3ddc997c2d" />
 </p>
 
 ## About Mongonaut
