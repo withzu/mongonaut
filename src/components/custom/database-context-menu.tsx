@@ -11,17 +11,8 @@ import {
 	ContextMenuSeparator,
 	ContextMenuTrigger,
 } from '@/components/ui/context-menu';
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { CreateItemDialog } from '@/components/custom/create-item-dialog';
+import { ConfirmNameDialog } from '@/components/custom/confirm-name-dialog';
 import { dropDatabase } from '@/actions/databaseOperation';
 import { useDatabaseFetcher } from '@/components/custom/database-fetcher';
 import type { Database } from '@/lib/types/mongo';
@@ -66,7 +57,7 @@ export function DatabaseContextMenu({
 					router.refresh();
 				}
 			} else {
-				toast.error(String(result.error) || 'Failed to drop database');
+				toast.error(result.error);
 			}
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'An unknown error occurred');
@@ -112,23 +103,21 @@ export function DatabaseContextMenu({
 				initialDb={database}
 			/>
 
-			<AlertDialog open={showDropDialog} onOpenChange={setShowDropDialog}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Drop database</AlertDialogTitle>
-						<AlertDialogDescription>
-							This will permanently delete the database &quot;{database}&quot; and all of its
-							collections. This action cannot be undone.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction onClick={handleDrop} disabled={isBusy}>
-							Drop database
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			<ConfirmNameDialog
+				open={showDropDialog}
+				onOpenChange={setShowDropDialog}
+				title="Drop database"
+				description={
+					<>
+						This permanently deletes the database &quot;{database}&quot; with all of its collections
+						and documents. This cannot be undone.
+					</>
+				}
+				expectedName={database}
+				confirmLabel="Drop database"
+				busy={isBusy}
+				onConfirm={handleDrop}
+			/>
 		</>
 	);
 }

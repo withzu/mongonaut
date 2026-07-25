@@ -1,0 +1,576 @@
+{
+	"schemaVersion": 2,
+	"generatedAt": "2026-07-25T13:03:19Z",
+	"title": "Design System: Mongonaut",
+	"extensions": {
+		"tokenFormat": "Colors are authored as bare HSL triples in CSS custom properties on :root and .dark, consumed as hsl(var(--token)). Tonal ramps below are synthesized in HSL to stay in the project's normative format rather than introducing a second color space.",
+		"colorMeta": {
+			"warm-paper": {
+				"role": "neutral",
+				"displayName": "Warm Paper",
+				"canonical": "hsl(40 30% 98%)",
+				"dark": "hsl(30 8% 10%)",
+				"cssVar": "--background",
+				"tonalRamp": [
+					"hsl(40 30% 15%)",
+					"hsl(40 30% 26%)",
+					"hsl(40 30% 37%)",
+					"hsl(40 30% 48%)",
+					"hsl(40 30% 59%)",
+					"hsl(40 30% 70%)",
+					"hsl(40 30% 82%)",
+					"hsl(40 30% 95%)"
+				]
+			},
+			"card-paper": {
+				"role": "neutral",
+				"displayName": "Card Paper",
+				"canonical": "hsl(44 36% 99%)",
+				"dark": "hsl(30 7% 13%)",
+				"cssVar": "--card",
+				"tonalRamp": [
+					"hsl(44 36% 15%)",
+					"hsl(44 36% 26%)",
+					"hsl(44 36% 37%)",
+					"hsl(44 36% 48%)",
+					"hsl(44 36% 59%)",
+					"hsl(44 36% 70%)",
+					"hsl(44 36% 82%)",
+					"hsl(44 36% 95%)"
+				]
+			},
+			"sidebar-paper": {
+				"role": "neutral",
+				"displayName": "Sidebar Paper",
+				"canonical": "hsl(42 28% 96%)",
+				"dark": "hsl(28 9% 9%)",
+				"cssVar": "--sidebar-background",
+				"tonalRamp": [
+					"hsl(42 28% 15%)",
+					"hsl(42 28% 26%)",
+					"hsl(42 28% 37%)",
+					"hsl(42 28% 48%)",
+					"hsl(42 28% 59%)",
+					"hsl(42 28% 70%)",
+					"hsl(42 28% 82%)",
+					"hsl(42 28% 95%)"
+				]
+			},
+			"wash": {
+				"role": "neutral",
+				"displayName": "Wash",
+				"canonical": "hsl(40 22% 93%)",
+				"dark": "hsl(30 6% 16%)",
+				"cssVar": "--muted / --secondary",
+				"tonalRamp": [
+					"hsl(40 22% 15%)",
+					"hsl(40 22% 26%)",
+					"hsl(40 22% 37%)",
+					"hsl(40 22% 48%)",
+					"hsl(40 22% 59%)",
+					"hsl(40 22% 70%)",
+					"hsl(40 22% 82%)",
+					"hsl(40 22% 95%)"
+				]
+			},
+			"accent-wash": {
+				"role": "neutral",
+				"displayName": "Accent Wash",
+				"canonical": "hsl(40 30% 90%)",
+				"dark": "hsl(32 9% 22%)",
+				"cssVar": "--accent",
+				"tonalRamp": [
+					"hsl(40 30% 15%)",
+					"hsl(40 30% 26%)",
+					"hsl(40 30% 37%)",
+					"hsl(40 30% 48%)",
+					"hsl(40 30% 59%)",
+					"hsl(40 30% 70%)",
+					"hsl(40 30% 82%)",
+					"hsl(40 30% 95%)"
+				]
+			},
+			"ink": {
+				"role": "neutral",
+				"displayName": "Ink",
+				"canonical": "hsl(28 14% 16%)",
+				"dark": "hsl(40 22% 91%)",
+				"cssVar": "--foreground",
+				"tonalRamp": [
+					"hsl(28 14% 15%)",
+					"hsl(28 14% 26%)",
+					"hsl(28 14% 37%)",
+					"hsl(28 14% 48%)",
+					"hsl(28 14% 59%)",
+					"hsl(28 14% 70%)",
+					"hsl(28 14% 82%)",
+					"hsl(28 14% 95%)"
+				]
+			},
+			"ink-solid": {
+				"role": "neutral",
+				"displayName": "Ink Solid",
+				"canonical": "hsl(28 16% 19%)",
+				"dark": "hsl(40 28% 91%)",
+				"cssVar": "--primary",
+				"tonalRamp": [
+					"hsl(28 16% 15%)",
+					"hsl(28 16% 26%)",
+					"hsl(28 16% 37%)",
+					"hsl(28 16% 48%)",
+					"hsl(28 16% 59%)",
+					"hsl(28 16% 70%)",
+					"hsl(28 16% 82%)",
+					"hsl(28 16% 95%)"
+				]
+			},
+			"pencil": {
+				"role": "neutral",
+				"displayName": "Pencil",
+				"canonical": "hsl(32 8% 44%)",
+				"dark": "hsl(36 11% 62%)",
+				"cssVar": "--muted-foreground",
+				"tonalRamp": [
+					"hsl(32 8% 15%)",
+					"hsl(32 8% 26%)",
+					"hsl(32 8% 37%)",
+					"hsl(32 8% 48%)",
+					"hsl(32 8% 59%)",
+					"hsl(32 8% 70%)",
+					"hsl(32 8% 82%)",
+					"hsl(32 8% 95%)"
+				]
+			},
+			"rule-line": {
+				"role": "neutral",
+				"displayName": "Rule Line",
+				"canonical": "hsl(38 18% 87%)",
+				"dark": "hsl(30 6% 20%)",
+				"cssVar": "--border / --input",
+				"tonalRamp": [
+					"hsl(38 18% 15%)",
+					"hsl(38 18% 26%)",
+					"hsl(38 18% 37%)",
+					"hsl(38 18% 48%)",
+					"hsl(38 18% 59%)",
+					"hsl(38 18% 70%)",
+					"hsl(38 18% 82%)",
+					"hsl(38 18% 95%)"
+				]
+			},
+			"zu-amber": {
+				"role": "primary",
+				"displayName": "Zu Amber",
+				"canonical": "#FFB211",
+				"hslEquivalent": "hsl(41 100% 53%)",
+				"note": "The Zu Company identity amber. Legal only as a solid fill behind black text, on the doors into the product. 1.73:1 on Warm Paper, so never text, icon or border.",
+				"tonalRamp": [
+					"hsl(41 100% 15%)",
+					"hsl(41 100% 26%)",
+					"hsl(41 100% 37%)",
+					"hsl(41 100% 48%)",
+					"hsl(41 100% 59%)",
+					"hsl(41 100% 70%)",
+					"hsl(41 100% 82%)",
+					"hsl(41 100% 95%)"
+				]
+			},
+			"zu-amber-pressed": {
+				"role": "primary",
+				"displayName": "Zu Amber Pressed",
+				"canonical": "#E5A010",
+				"hslEquivalent": "hsl(41 87% 48%)",
+				"note": "Hover and pressed state for the identity fill.",
+				"tonalRamp": [
+					"hsl(41 87% 15%)",
+					"hsl(41 87% 26%)",
+					"hsl(41 87% 37%)",
+					"hsl(41 87% 48%)",
+					"hsl(41 87% 59%)",
+					"hsl(41 87% 70%)",
+					"hsl(41 87% 82%)",
+					"hsl(41 87% 95%)"
+				]
+			},
+			"signal-amber": {
+				"role": "primary",
+				"displayName": "Signal Amber",
+				"canonical": "hsl(30 90% 40%)",
+				"dark": "hsl(38 92% 60%)",
+				"cssVar": "--brand",
+				"note": "The applied amber. The identity amber darkened until it can be read on paper; in dark mode it is effectively the identity amber itself.",
+				"tonalRamp": [
+					"hsl(30 90% 15%)",
+					"hsl(30 90% 26%)",
+					"hsl(30 90% 37%)",
+					"hsl(30 90% 48%)",
+					"hsl(30 90% 59%)",
+					"hsl(30 90% 70%)",
+					"hsl(30 90% 82%)",
+					"hsl(30 90% 95%)"
+				]
+			},
+			"focus-amber": {
+				"role": "primary",
+				"displayName": "Focus Amber",
+				"canonical": "hsl(35 92% 40%)",
+				"dark": "hsl(38 90% 56%)",
+				"cssVar": "--ring / --sidebar-ring",
+				"note": "Focus indicators only. Held at 3:1 against the background per WCAG 1.4.11.",
+				"tonalRamp": [
+					"hsl(35 92% 15%)",
+					"hsl(35 92% 26%)",
+					"hsl(35 92% 37%)",
+					"hsl(35 92% 48%)",
+					"hsl(35 92% 59%)",
+					"hsl(35 92% 70%)",
+					"hsl(35 92% 82%)",
+					"hsl(35 92% 95%)"
+				]
+			},
+			"marker-wash": {
+				"role": "secondary",
+				"displayName": "Marker Wash",
+				"canonical": "hsl(38 50% 90%)",
+				"dark": "hsl(34 24% 18%)",
+				"cssVar": "--sidebar-accent",
+				"note": "Fill for the active collection row in the sidebar tree.",
+				"tonalRamp": [
+					"hsl(38 50% 15%)",
+					"hsl(38 50% 26%)",
+					"hsl(38 50% 37%)",
+					"hsl(38 50% 48%)",
+					"hsl(38 50% 59%)",
+					"hsl(38 50% 70%)",
+					"hsl(38 50% 82%)",
+					"hsl(38 50% 95%)"
+				]
+			},
+			"marker-ink": {
+				"role": "secondary",
+				"displayName": "Marker Ink",
+				"canonical": "hsl(28 92% 30%)",
+				"dark": "hsl(40 95% 64%)",
+				"cssVar": "--sidebar-accent-foreground",
+				"note": "Label and icon on Marker Wash. 5.5:1 on that fill.",
+				"tonalRamp": [
+					"hsl(28 92% 15%)",
+					"hsl(28 92% 26%)",
+					"hsl(28 92% 37%)",
+					"hsl(28 92% 48%)",
+					"hsl(28 92% 59%)",
+					"hsl(28 92% 70%)",
+					"hsl(28 92% 82%)",
+					"hsl(28 92% 95%)"
+				]
+			},
+			"alarm": {
+				"role": "tertiary",
+				"displayName": "Alarm",
+				"canonical": "hsl(4 76% 45%)",
+				"dark": "hsl(4 80% 64%)",
+				"cssVar": "--destructive",
+				"note": "Destruction and failure only. 5.27:1 as text on Warm Paper, 5.43:1 on the dark ground.",
+				"tonalRamp": [
+					"hsl(4 76% 15%)",
+					"hsl(4 76% 26%)",
+					"hsl(4 76% 37%)",
+					"hsl(4 76% 48%)",
+					"hsl(4 76% 59%)",
+					"hsl(4 76% 70%)",
+					"hsl(4 76% 82%)",
+					"hsl(4 76% 95%)"
+				]
+			}
+		},
+		"reservedColors": {
+			"note": "Declared in globals.css but applied by no component. Reserved for future data visualization. Not interface colors.",
+			"tokens": [
+				{ "cssVar": "--chart-1", "light": "hsl(32 90% 52%)", "dark": "hsl(38 92% 58%)" },
+				{ "cssVar": "--chart-2", "light": "hsl(18 74% 52%)", "dark": "hsl(18 78% 58%)" },
+				{ "cssVar": "--chart-3", "light": "hsl(168 52% 38%)", "dark": "hsl(168 48% 50%)" },
+				{ "cssVar": "--chart-4", "light": "hsl(256 42% 56%)", "dark": "hsl(256 52% 68%)" },
+				{ "cssVar": "--chart-5", "light": "hsl(200 60% 44%)", "dark": "hsl(200 64% 56%)" },
+				{ "cssVar": "--sidebar-primary", "light": "hsl(30 90% 40%)", "dark": "hsl(38 92% 60%)" }
+			]
+		},
+		"typographyMeta": {
+			"display": {
+				"displayName": "Display",
+				"purpose": "Product wordmark and page-level titles. One per screen."
+			},
+			"headline": { "displayName": "Headline", "purpose": "Section headings inside a page." },
+			"title": {
+				"displayName": "Title",
+				"purpose": "Card and dialog titles, set at leading-none so title and description read as one block."
+			},
+			"body": {
+				"displayName": "Body",
+				"purpose": "The working size for all interface text. Inputs render at 1rem below 768px to defeat mobile zoom."
+			},
+			"label": {
+				"displayName": "Label",
+				"purpose": "Field labels, badges, group headings. Sentence case, never uppercase tracking."
+			},
+			"metric": {
+				"displayName": "Metric",
+				"purpose": "The sidebar's right-aligned tabular numbers: document counts, collection and database sizes."
+			},
+			"code": {
+				"displayName": "Code",
+				"purpose": "Geist Mono. Index key specs, Extended JSON hints, env var names, connection errors, confirm-by-typing targets."
+			}
+		},
+		"fontFeatures": {
+			"global": "'cv11', 'ss01'",
+			"textRendering": "optimizeLegibility",
+			"note": "Applied to body, so Geist Sans renders in its alternate character set throughout. Numbers additionally take 'tnum' wherever they are comparable."
+		},
+		"shadows": [
+			{
+				"name": "vestigial",
+				"value": "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+				"purpose": "Tailwind shadow-xs on buttons, inputs, select triggers and switch tracks. Inherited from the component base, read as a border refinement, not elevation. Do not extend it to new elements."
+			},
+			{
+				"name": "seated",
+				"value": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+				"purpose": "Tailwind shadow-sm on cards, the active tab trigger and the inset sidebar. The maximum permitted on anything in the document flow."
+			},
+			{
+				"name": "floating",
+				"value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+				"purpose": "Tailwind shadow-md on popovers, select menus, dropdown menus and context menus. Transient surfaces anchored to a trigger."
+			},
+			{
+				"name": "detached",
+				"value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+				"purpose": "Tailwind shadow-lg on dialogs, sheets and dropdown submenus. Surfaces that own the screen until dismissed."
+			}
+		],
+		"motion": [
+			{
+				"name": "sidebar-slide",
+				"value": "200ms linear",
+				"purpose": "The only layout animation in the system. Sidebar width, left and right during offcanvas collapse."
+			},
+			{
+				"name": "overlay-enter",
+				"value": "200ms, zoom from 95% with a fade",
+				"purpose": "Dialog, alert dialog and sheet enter and exit."
+			},
+			{
+				"name": "state-transition",
+				"value": "transition-[color,box-shadow]",
+				"purpose": "Inputs, select triggers, tab triggers and badges. Color and shadow only, never layout."
+			},
+			{
+				"name": "control-transition",
+				"value": "transition-all",
+				"purpose": "Buttons, which shift fill and ring together on hover and focus."
+			},
+			{
+				"name": "skeleton-pulse",
+				"value": "animate-pulse on an Accent Wash block",
+				"purpose": "The only loading affordance. No spinners anywhere in the product."
+			}
+		],
+		"breakpoints": [
+			{
+				"name": "md",
+				"value": "768px",
+				"purpose": "The only breakpoint in the system. Defined once in useIsMobile as MOBILE_BREAKPOINT and mirrored by Tailwind's md:. Below it, the sidebar becomes an 18rem sheet behind a fixed two-row header."
+			}
+		],
+		"dimensions": [
+			{ "name": "sidebar-width", "value": "16rem", "purpose": "Desktop rail." },
+			{ "name": "sidebar-width-mobile", "value": "18rem", "purpose": "Mobile sheet." },
+			{ "name": "sidebar-width-icon", "value": "3rem", "purpose": "Icon-collapsed rail." },
+			{
+				"name": "control-height-default",
+				"value": "2.25rem",
+				"purpose": "Buttons, inputs, select triggers, tab lists."
+			},
+			{
+				"name": "control-height-compact",
+				"value": "2rem",
+				"purpose": "Small buttons, sidebar rows, desktop search."
+			},
+			{
+				"name": "control-height-inline",
+				"value": "1.75rem",
+				"purpose": "Ghost actions inside a panel header strip."
+			},
+			{
+				"name": "mobile-header",
+				"value": "3.5rem chrome + 3rem breadcrumb",
+				"purpose": "Fixed top bars below 768px, cleared by 7rem of content top margin."
+			},
+			{
+				"name": "scrollbar",
+				"value": "8px",
+				"purpose": "Custom scrollbar, track on the page ground, thumb on Accent Wash, thumb hover on Pencil. scrollbar-gutter: stable on html."
+			}
+		],
+		"focusRing": {
+			"value": "box-shadow: 0 0 0 3px hsl(var(--ring) / 0.5); border-color: hsl(var(--ring));",
+			"purpose": "Applied on focus-visible to every focusable element. The ring and the solid border always travel together."
+		}
+	},
+	"components": [
+		{
+			"name": "Primary Button",
+			"kind": "button",
+			"refersTo": "button-primary",
+			"description": "The committed action in a region: Run find, Run aggregation, Try again, dialog confirms.",
+			"html": "<button class=\"ds-btn-primary\"><svg class=\"ds-btn-icon\" viewBox=\"0 0 24 24\" fill=\"currentColor\" aria-hidden=\"true\"><polygon points=\"6 3 20 12 6 21 6 3\"/></svg>Run find</button>",
+			"css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; height: 2.25rem; padding: 0.5rem 1rem; border: none; border-radius: 8px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; white-space: nowrap; cursor: pointer; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); transition: all 0.15s ease; } .ds-btn-primary:hover { background: hsl(var(--primary) / 0.9); } .ds-btn-primary:focus-visible { outline: none; border-color: hsl(var(--ring)); box-shadow: 0 0 0 3px hsl(var(--ring) / 0.5); } .ds-btn-primary:disabled { opacity: 0.5; pointer-events: none; } .ds-btn-icon { width: 1rem; height: 1rem; flex-shrink: 0; }"
+		},
+		{
+			"name": "Identity Button",
+			"kind": "button",
+			"refersTo": "button-identity",
+			"description": "Zu Amber fill with black text. Restricted to the doors into the product: sign-in, single sign-on, first-run setup, and the Zu CTA on About. Never appears inside the working interface.",
+			"html": "<button class=\"ds-btn-identity\">Sign in</button>",
+			"css": ".ds-btn-identity { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; height: 2.25rem; padding: 0.5rem 1rem; border: none; border-radius: 8px; background: #FFB211; color: #000000; font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; cursor: pointer; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); transition: all 0.15s ease; } .ds-btn-identity:hover { background: #E5A010; } .ds-btn-identity:focus-visible { outline: none; box-shadow: 0 0 0 3px hsl(var(--ring) / 0.5); }"
+		},
+		{
+			"name": "Ghost Button",
+			"kind": "button",
+			"refersTo": "button-ghost-hover",
+			"description": "No border and no fill at rest, hovering to Accent Wash. Carries almost all row-level and panel-level actions and is the reason the interface reads as quiet. The destructive variant shifts its text to Alarm on hover instead of gaining a red fill.",
+			"html": "<div class=\"ds-ghost-row\"><button class=\"ds-btn-ghost\"><svg class=\"ds-btn-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z\"/><path d=\"m15 5 4 4\"/></svg>Edit</button><button class=\"ds-btn-ghost ds-btn-ghost--danger\"><svg class=\"ds-btn-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6h18\"/><path d=\"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/></svg>Delete</button></div>",
+			"css": ".ds-ghost-row { display: flex; align-items: center; gap: 0.25rem; } .ds-btn-ghost { display: inline-flex; align-items: center; gap: 0.375rem; height: 1.75rem; padding: 0 0.75rem; border: none; border-radius: 8px; background: transparent; color: hsl(var(--muted-foreground)); font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; } .ds-btn-ghost:hover { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); } .ds-btn-ghost--danger:hover { background: hsl(var(--accent)); color: hsl(var(--destructive)); } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 3px hsl(var(--ring) / 0.5); } .ds-btn-icon { width: 0.875rem; height: 0.875rem; flex-shrink: 0; }"
+		},
+		{
+			"name": "Search Input",
+			"kind": "input",
+			"refersTo": "input",
+			"description": "The sidebar search: the one input with a leading icon, forced to the page ground in both themes so it separates from Sidebar Paper.",
+			"html": "<div class=\"ds-input-wrap\"><svg class=\"ds-input-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg><input class=\"ds-input-search\" type=\"text\" placeholder=\"Search databases &amp; collections...\" /></div>",
+			"css": ".ds-input-wrap { position: relative; width: 100%; max-width: 15rem; } .ds-input-icon { position: absolute; left: 0.625rem; top: 50%; transform: translateY(-50%); width: 0.875rem; height: 0.875rem; color: hsl(var(--muted-foreground)); pointer-events: none; } .ds-input-search { width: 100%; height: 2rem; padding: 0.25rem 0.75rem 0.25rem 2rem; border: 1px solid hsl(var(--input)); border-radius: 8px; background: hsl(var(--background)); color: hsl(var(--foreground)); font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); transition: color 0.15s ease, box-shadow 0.15s ease; } .ds-input-search::placeholder { color: hsl(var(--muted-foreground)); } .ds-input-search:focus-visible { outline: none; border-color: hsl(var(--ring)); box-shadow: 0 0 0 3px hsl(var(--ring) / 0.5); } .ds-input-search[aria-invalid=\"true\"] { border-color: hsl(var(--destructive)); box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.2); }"
+		},
+		{
+			"name": "Sidebar Collection Row",
+			"kind": "nav",
+			"refersTo": "nav-row-active",
+			"description": "Signature component. The two-level tree row with right-aligned tabular metrics. Active state is a filled Marker Wash region with Marker Ink text, not an indicator bar.",
+			"html": "<nav class=\"ds-nav\"><button class=\"ds-nav-row ds-nav-row--db\"><svg class=\"ds-nav-chevron\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"/></svg><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><ellipse cx=\"12\" cy=\"5\" rx=\"9\" ry=\"3\"/><path d=\"M3 5V19A9 3 0 0 0 21 19V5\"/><path d=\"M3 12A9 3 0 0 0 21 12\"/></svg><span class=\"ds-nav-label\">analytics</span><span class=\"ds-nav-metric\">4.1 MB</span></button><div class=\"ds-nav-sub\"><button class=\"ds-nav-row ds-nav-row--active\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3v18\"/><rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\"/><path d=\"M3 9h18\"/><path d=\"M3 15h18\"/></svg><span class=\"ds-nav-label\">events</span><span class=\"ds-nav-metric\">12480<span class=\"ds-nav-sep\">/</span>3.2 MB</span></button><button class=\"ds-nav-row\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 3v18\"/><rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\"/><path d=\"M3 9h18\"/><path d=\"M3 15h18\"/></svg><span class=\"ds-nav-label\">sessions</span><span class=\"ds-nav-metric\">842<span class=\"ds-nav-sep\">/</span>901 kB</span></button></div></nav>",
+			"css": ".ds-nav { display: flex; flex-direction: column; gap: 0.25rem; width: 16rem; padding: 0.5rem; background: hsl(var(--sidebar-background)); border-radius: 10px; } .ds-nav-sub { display: flex; flex-direction: column; gap: 0.25rem; margin-left: 0.875rem; padding-left: 0.625rem; border-left: 1px solid hsl(var(--sidebar-border)); } .ds-nav-row { display: flex; align-items: center; gap: 0.5rem; width: 100%; height: 2rem; padding: 0.5rem; border: none; border-radius: 8px; background: transparent; color: hsl(var(--sidebar-foreground)); font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; text-align: left; cursor: pointer; overflow: hidden; transition: background 0.15s ease, color 0.15s ease; } .ds-nav-row:hover { background: hsl(var(--sidebar-accent)); color: hsl(var(--sidebar-accent-foreground)); } .ds-nav-row--active { background: hsl(var(--sidebar-accent)); color: hsl(var(--sidebar-accent-foreground)); font-weight: 500; } .ds-nav-row--db { font-weight: 500; } .ds-nav-row:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(var(--sidebar-ring)); } .ds-nav-chevron { width: 1rem; height: 1rem; flex-shrink: 0; color: hsl(var(--muted-foreground)); } .ds-nav-icon { width: 1rem; height: 1rem; flex-shrink: 0; color: hsl(var(--muted-foreground)); } .ds-nav-row--active .ds-nav-icon { color: inherit; } .ds-nav-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-nav-metric { flex-shrink: 0; margin-left: auto; font-size: 0.6875rem; line-height: 1rem; font-variant-numeric: tabular-nums; color: hsl(var(--muted-foreground) / 0.6); } .ds-nav-row--active .ds-nav-metric { color: hsl(var(--sidebar-accent-foreground) / 0.75); } .ds-nav-sep { margin: 0 0.25rem; opacity: 0.4; }"
+		},
+		{
+			"name": "Framed Panel",
+			"kind": "custom",
+			"refersTo": "panel",
+			"description": "Signature component. The recurring container for anything that holds or acts on data: a 10px Rule Line frame with overflow hidden, a header strip separated by a hairline, and a body tinted with Wash at 20 to 30 percent alpha. Never replace the frame with a shadow.",
+			"html": "<section class=\"ds-panel\"><header class=\"ds-panel-head\"><div class=\"ds-tabs\"><button class=\"ds-tab ds-tab--active\">Find</button><button class=\"ds-tab\">Aggregate</button></div><button class=\"ds-panel-action\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M18 6 6 18\"/><path d=\"m6 6 12 12\"/></svg>Clear</button></header><div class=\"ds-panel-body\"><span class=\"ds-panel-label\">Filter</span><div class=\"ds-panel-frame\"><code class=\"ds-panel-code\">{ \"status\": \"active\" }</code></div></div></section>",
+			"css": ".ds-panel { border: 1px solid hsl(var(--border)); border-radius: 10px; overflow: hidden; background: hsl(var(--muted) / 0.2); max-width: 30rem; } .ds-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.5rem 0.75rem; border-bottom: 1px solid hsl(var(--border)); } .ds-tabs { display: inline-flex; align-items: center; height: 2.25rem; padding: 3px; border-radius: 10px; background: hsl(var(--muted)); } .ds-tab { height: calc(100% - 1px); padding: 0.25rem 0.5rem; border: 1px solid transparent; border-radius: 8px; background: transparent; color: hsl(var(--foreground)); font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: color 0.15s ease, box-shadow 0.15s ease; } .ds-tab--active { background: hsl(var(--background)); box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1); } .ds-tab:focus-visible { outline: none; border-color: hsl(var(--ring)); box-shadow: 0 0 0 3px hsl(var(--ring) / 0.5); } .ds-panel-action { display: inline-flex; align-items: center; gap: 0.375rem; height: 2rem; padding: 0 0.75rem; border: none; border-radius: 8px; background: transparent; color: hsl(var(--muted-foreground)); font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.15s ease; } .ds-panel-action svg { width: 0.875rem; height: 0.875rem; } .ds-panel-action:hover { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); } .ds-panel-body { display: flex; flex-direction: column; gap: 0.75rem; padding: 0.75rem; } .ds-panel-label { font-size: 0.75rem; font-weight: 500; line-height: 1rem; color: hsl(var(--muted-foreground)); font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; } .ds-panel-frame { border: 1px solid hsl(var(--border)); border-radius: 8px; overflow: hidden; background: hsl(var(--background)); padding: 0.625rem 0.75rem; } .ds-panel-code { font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace; font-size: 0.75rem; line-height: 1rem; color: hsl(var(--foreground)); }"
+		},
+		{
+			"name": "Badges and Read-only Pill",
+			"kind": "chip",
+			"refersTo": "badge-outline",
+			"description": "Outline badges carry data attributes on index rows. The read-only pill is the one deliberate exception to the corner rule: fully round, so it reads as an instance-wide condition rather than a property of the thing beside it.",
+			"html": "<div class=\"ds-badge-row\"><span class=\"ds-badge-outline\">unique</span><span class=\"ds-badge-outline\">sparse</span><span class=\"ds-badge-outline\">ttl 3600s</span><span class=\"ds-badge-secondary\">v0.1.6</span><span class=\"ds-pill\">Read-only</span></div>",
+			"css": ".ds-badge-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; } .ds-badge-outline { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; border: 1px solid hsl(var(--border)); border-radius: 8px; background: transparent; color: hsl(var(--foreground)); font-size: 0.75rem; font-weight: 500; line-height: 1rem; white-space: nowrap; } .ds-badge-secondary { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; border: 1px solid transparent; border-radius: 8px; background: hsl(var(--secondary)); color: hsl(var(--secondary-foreground)); font-size: 0.75rem; font-weight: 500; line-height: 1rem; } .ds-pill { display: inline-flex; align-items: center; padding: 0.125rem 0.625rem; border-radius: 9999px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); font-size: 0.75rem; line-height: 1rem; }"
+		},
+		{
+			"name": "Empty State",
+			"kind": "custom",
+			"refersTo": "card",
+			"description": "The no-selection state: an Accent Wash medallion, one Display line, one Pencil sentence naming the next action. Absence of a selection looks different from absence of data, which uses a dashed Rule Line box instead.",
+			"html": "<div class=\"ds-empty\"><div class=\"ds-empty-medallion\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><ellipse cx=\"12\" cy=\"5\" rx=\"9\" ry=\"3\"/><path d=\"M3 5V19A9 3 0 0 0 21 19V5\"/><path d=\"M3 12A9 3 0 0 0 21 12\"/></svg></div><h2 class=\"ds-empty-title\">Welcome to Mongonaut</h2><p class=\"ds-empty-body\">Select a collection from the sidebar to view and manage your MongoDB data.</p></div>",
+			"css": ".ds-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.5rem; max-width: 28rem; padding: 2rem 1rem; font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif; } .ds-empty-medallion { display: flex; align-items: center; justify-content: center; width: 3rem; height: 3rem; margin-bottom: 1rem; border-radius: 9999px; background: hsl(var(--muted)); color: hsl(var(--primary)); } .ds-empty-medallion svg { width: 1.5rem; height: 1.5rem; } .ds-empty-title { margin: 0; font-size: 1.5rem; font-weight: 600; line-height: 2rem; letter-spacing: -0.025em; color: hsl(var(--foreground)); } .ds-empty-body { margin: 0; font-size: 0.875rem; line-height: 1.25rem; color: hsl(var(--muted-foreground)); }"
+		}
+	],
+	"narrative": {
+		"northStar": "The Warm Terminal",
+		"overview": "Mongonaut has the density and precision of a developer tool, rendered on paper instead of on a black console. Everything a terminal earns through monospace, alignment and restraint is here, but the ground is a warm off-white (#fbfaf8) rather than a void, and the ink is a soft brown-black (#2f2823) rather than pure black. The result reads as an instrument you can sit in front of all day: warm enough not to fatigue, quiet enough that a document's contents are always the loudest thing on screen.\n\nThe system is structurally flat. Hairline borders at #e4dfd8 do the work that shadows and cards do elsewhere, and the three surface tones (sidebar, page, card) form a shallow tonal ladder where coming forward means getting lighter, in both themes. Numbers are treated as a first-class material: every count, byte size and version renders in tabular figures so that columns of them line up down the sidebar. Controls are quiet and precise. Ghost and outline variants do most of the work, fixed control heights (2.25rem default, 2rem compact, 1.75rem in-panel) hold the grid, and solid fills are rare enough to mean something.\n\nAmber is the only chromatic voice in the product. It arrives in exactly two registers: the Zu identity amber #FFB211 as a fill behind black text on the doors into the app, and a darkened Signal Amber for accent text, active navigation and focus. Nothing else in the interface is allowed to be colorful. What Mongonaut deliberately is not: the grey Bootstrap chrome and bordered data tables of the mongo-express era, and the glassmorphic purple-and-cyan register of contemporary AI tooling. No gradients inside the product, no glow, no neon.",
+		"keyCharacteristics": [
+			"Warm paper ground and brown-black ink; never pure white, never pure black",
+			"Hairline borders as the primary structural device; shadows reserved for detached surfaces",
+			"Amber as the single accent, in two strictly separated roles",
+			"Tabular figures on every comparable number",
+			"0.875rem as the working body size; text-base and up reserved for titles",
+			"Fixed control-height ladder; no free-form vertical sizing",
+			"One breakpoint at 768px, dark mode as a peer of light"
+		],
+		"rules": [
+			{
+				"name": "The Darkening Amber Rule",
+				"body": "There is one amber identity, #FFB211, and it changes value rather than changing hue. On the dark ground it appears essentially as itself. On warm paper it reaches only 1.73:1, so it darkens to Signal Amber for anything that must be read, and survives at full strength only as a fill with black text on top (11.6:1). An amber that cannot be read is not on brand, it is broken.",
+				"section": "colors"
+			},
+			{
+				"name": "The One Chromatic Voice Rule",
+				"body": "Amber is the only accent hue in Mongonaut. Alarm red is a functional exception, not a second accent. The five chart hues declared in globals.css (--chart-1 through --chart-5) are currently unused by any component; they are a reserved allowance for future data visualization and must not be borrowed for interface color.",
+				"section": "colors"
+			},
+			{
+				"name": "The Forward-Is-Lighter Rule",
+				"body": "In both themes the tonal ladder runs sidebar, then page, then card, and each step forward is lighter than the one behind it. Dark mode does not invert this relationship, it repeats it.",
+				"section": "colors"
+			},
+			{
+				"name": "The Tabular Rule",
+				"body": "Every number a user might compare against another number renders with tabular figures. Sizes, counts, versions, sidebar badges. A byte size that shifts horizontally as it updates is a bug, not a style choice.",
+				"section": "typography"
+			},
+			{
+				"name": "The Small-Body Rule",
+				"body": "0.875rem is body text in Mongonaut, not a compact variant. 1rem and above are reserved for titles and for the mobile input exception. Reaching for text-base on a row, a label or a description breaks the density the product depends on.",
+				"section": "typography"
+			},
+			{
+				"name": "The Sentence Case Rule",
+				"body": "Interface text is sentence case throughout, including buttons and badges. No uppercase tracking, no title case on actions. \"Run aggregation\", not \"Run Aggregation\" and not \"RUN AGGREGATION\".",
+				"section": "typography"
+			},
+			{
+				"name": "The Single Breakpoint Rule",
+				"body": "768px is the only breakpoint in the system, defined once in the mobile hook and mirrored by Tailwind's md:. There is no tablet layout and no desktop-wide layout. If a change needs a second breakpoint, that is a signal the composition is wrong, not that the system needs another number.",
+				"section": "layout"
+			},
+			{
+				"name": "The Detachment Rule",
+				"body": "A shadow is a claim that the element has left the page. If the element scrolls with the content and belongs to the layout, it gets a hairline and a tonal step, never a shadow. Every shadow-md and shadow-lg in the codebase sits on a Radix portal; that correlation is the rule made visible.",
+				"section": "elevation"
+			},
+			{
+				"name": "The Inverse Corner Rule",
+				"body": "The smaller the element, the tighter the corner. A 14px radius on a button, or an 8px radius on a card, reads as a mistake in this system even though both values are in the scale.",
+				"section": "shapes"
+			},
+			{
+				"name": "The Hairline-Only Rule",
+				"body": "Borders are 1px Rule Line, full stop. No 2px emphasis borders, no colored borders as a state signal, no double rules. State is carried by fill and by text color, not by border weight.",
+				"section": "shapes"
+			}
+		],
+		"dos": [
+			"Do route amber through the two-role doctrine: --brand (Signal Amber) for anything read as a mark, #FFB211 only as a fill behind black text on the doors into the product.",
+			"Do give every comparable number tabular figures, at 0.6875rem in the sidebar and 0.75rem in badges.",
+			"Do frame data regions with a 10px Rule Line border and, where they need a header, a 1px bottom-bordered strip at 0.75rem 0.5rem.",
+			"Do hold the control-height ladder: 2.25rem default, 2rem compact, 1.75rem for actions inside a panel strip.",
+			"Do keep 0.875rem as body size and reserve 1rem and above for titles.",
+			"Do express focus as a 3px --ring ring at 50% alpha plus a solid --ring border, on every focusable element.",
+			"Do carry state through fill and text color: Marker Wash for the active row, Alarm text on destructive hover, 50% opacity for disabled.",
+			"Do define new colors as bare HSL triples in both :root and .dark, and keep the contrast comments that sit above --destructive, --ring and --sidebar-accent-foreground current when those values change.",
+			"Do let the sidebar recede: it sits one tonal step behind the page precisely so the data can be the brightest surface."
+		],
+		"donts": [
+			"Don't use raw #FFB211 as text, icon or border color. It reaches 1.73:1 on the paper ground and cannot be read.",
+			"Don't add a shadow to anything that scrolls with the page. Hairline plus tonal step, or nothing.",
+			"Don't introduce a second accent hue. Amber is the only voice; Alarm red is functional; --chart-1 through --chart-5 are reserved for future data visualization and are not interface colors.",
+			"Don't use pure #000000 or #FFFFFF as a surface. The only sanctioned pure black is the text on a Zu Amber fill, and the only sanctioned pure white is the text on a destructive fill.",
+			"Don't put a gradient in the working interface. The one gradient in the codebase is the Zu attribution panel on About, and it is attribution chrome, not product surface.",
+			"Don't add blur beyond the mobile header and the About attribution panel. No glassmorphism, no translucent floating panels, no frosted overlays.",
+			"Don't render data as a bordered Bootstrap-style table with grey chrome and default blue links. That is the mongo-express look this product exists to replace.",
+			"Don't reach for purple or cyan gradients, glow, neon borders, or animated background shapes. The contemporary AI-tool register is a confirmed anti-reference.",
+			"Don't uppercase or title-case interface text, and don't add letter-spacing to labels.",
+			"Don't add a second breakpoint. 768px is the only one, and it is defined once in useIsMobile and mirrored by md:.",
+			"Don't specify a border color on a border utility. border-border is applied globally; a hue on a border is either redundant or a violation of the Hairline-Only Rule.",
+			"Don't animate layout. Transitions are limited to color, box-shadow, and the sidebar's width and position at 200ms ease-linear."
+		]
+	}
+}

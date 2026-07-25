@@ -7,7 +7,8 @@ import { useTheme } from 'next-themes';
 import type { AuthMode } from '@/lib/auth/config';
 import { Button } from '@/components/ui/button';
 import { ChangePasswordDialog } from '@/components/custom/change-password-dialog';
-import { cn, usePreferredTheme } from '@/lib/utils';
+import { usePreferredTheme } from '@/hooks/use-preferred-theme';
+import { cn } from '@/lib/utils';
 
 interface AuthMeResponse {
 	mode: AuthMode;
@@ -124,18 +125,18 @@ export function SidebarFooterActions({
 				)}
 
 				{isAccountAdmin && (
-					<Link href="/admin">
-						<Button size="icon" variant="ghost" aria-label="Accounts & settings">
+					<Button size="icon" variant="ghost" aria-label="Accounts and settings" asChild>
+						<Link href="/admin">
 							<SettingsIcon size={18} />
-						</Button>
-					</Link>
+						</Link>
+					</Button>
 				)}
 
-				<Link href="/about">
-					<Button size="icon" variant="ghost" aria-label="About">
+				<Button size="icon" variant="ghost" aria-label="About Mongonaut" asChild>
+					<Link href="/about">
 						<InfoIcon size={18} />
-					</Button>
-				</Link>
+					</Link>
+				</Button>
 
 				{canChangeOwnPassword && (
 					<Button

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { cloneElement, useId, useState, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { KeyRoundIcon, PencilIcon, PlusIcon, ShieldIcon, TrashIcon, XIcon } from 'lucide-react';
@@ -249,6 +249,19 @@ function AccountFormDialog({
 	const [grants, setGrants] = useState<Grant[]>(account?.grants ?? []);
 	const [saving, setSaving] = useState(false);
 
+	const [wasOpen, setWasOpen] = useState(open);
+	if (open !== wasOpen) {
+		setWasOpen(open);
+		if (open) {
+			setEmail(account?.email ?? '');
+			setName(account?.name ?? '');
+			setPassword('');
+			setIsAdmin(account?.isAdmin ?? false);
+			setDisabled(account?.disabled ?? false);
+			setGrants(account?.grants ?? []);
+		}
+	}
+
 	const handleSave = async () => {
 		setSaving(true);
 		try {
@@ -262,7 +275,13 @@ function AccountFormDialog({
 					toast.error(result.error);
 				}
 			} else if (account) {
-				const result = await updateAccountAction(account.id, { name, isAdmin, disabled, grants });
+				const result = await updateAccountAction(account.id, {
+					email,
+					name,
+					isAdmin,
+					disabled,
+					grants,
+				});
 				if (result.success) {
 					toast.success('Account updated');
 					onOpenChange(false);
@@ -289,25 +308,25 @@ function AccountFormDialog({
 				</DialogHeader>
 
 				<div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto px-1">
+					<Labeled label="Email">
+						<Input
+							type="email"
+							autoComplete="off"
+							value={email}
+							onChange={e => setEmail(e.target.value)}
+							placeholder="user@example.com"
+						/>
+					</Labeled>
 					{mode === 'create' && (
-						<>
-							<Labeled label="Email">
-								<Input
-									type="email"
-									value={email}
-									onChange={e => setEmail(e.target.value)}
-									placeholder="user@example.com"
-								/>
-							</Labeled>
-							<Labeled label="Password">
-								<Input
-									type="password"
-									value={password}
-									onChange={e => setPassword(e.target.value)}
-									placeholder="At least 8 characters"
-								/>
-							</Labeled>
-						</>
+						<Labeled label="Password">
+							<Input
+								type="password"
+								autoComplete="new-password"
+								value={password}
+								onChange={e => setPassword(e.target.value)}
+								placeholder="At least 8 characters"
+							/>
+						</Labeled>
 					)}
 					<Labeled label="Name (optional)">
 						<Input
@@ -346,7 +365,7 @@ function AccountFormDialog({
 					</Button>
 					<Button
 						onClick={handleSave}
-						disabled={saving || (mode === 'create' && (!email || password.length === 0))}
+						disabled={saving || !email || (mode === 'create' && password.length === 0)}
 					>
 						{mode === 'create' ? 'Create account' : 'Save changes'}
 					</Button>
@@ -411,7 +430,7 @@ function GrantsEditor({
 							update(index, { database: value, collection: ALL_COLLECTIONS })
 						}
 					>
-						<SelectTrigger className="flex-1">
+						<SelectTrigger className="flex-1" aria-label={`Database for grant ${index + 1}`}>
 							<SelectValue placeholder="Database" />
 						</SelectTrigger>
 						<SelectContent>
@@ -428,7 +447,7 @@ function GrantsEditor({
 						onValueChange={value => update(index, { collection: value })}
 						disabled={!grant.database}
 					>
-						<SelectTrigger className="flex-1">
+						<SelectTrigger className="flex-1" aria-label={`Collection for grant ${index + 1}`}>
 							<SelectValue placeholder="Collection" />
 						</SelectTrigger>
 						<SelectContent>
@@ -445,7 +464,7 @@ function GrantsEditor({
 						value={grant.access}
 						onValueChange={value => update(index, { access: value as GrantAccess })}
 					>
-						<SelectTrigger className="w-[130px]">
+						<SelectTrigger className="w-[130px]" aria-label={`Access level for grant ${index + 1}`}>
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -532,11 +551,14 @@ function ResetPasswordDialog({
 	);
 }
 
-function Labeled({ label, children }: { label: string; children: React.ReactNode }) {
+function Labeled({ label, children }: { label: string; children: ReactElement<{ id?: string }> }) {
+	const id = useId();
 	return (
 		<div className="flex flex-col gap-2">
-			<label className="text-sm font-medium">{label}</label>
-			{children}
+			<label htmlFor={id} className="text-sm font-medium">
+				{label}
+			</label>
+			{cloneElement(children, { id })}
 		</div>
 	);
 }

@@ -1,4 +1,5 @@
 import { env, envInt } from '@/lib/env';
+import { MIN_AUTH_SECRET_LENGTH } from '@/lib/auth/policy';
 
 export type AuthMode = 'NONE' | 'STATIC_PASSWORD' | 'OIDC' | 'ACCOUNT';
 
@@ -55,12 +56,21 @@ let cached: AuthConfig | null = null;
 export function getAuthConfig(): AuthConfig {
 	if (cached) return cached;
 	const mode = readMode();
-	const secret = env('MONGONAUT_AUTH_SECRET', '').trim() || null;
-	const sessionTtlSeconds = envInt('MONGONAUT_SESSION_TTL', 60 * 60 * 24);
+	const rawSecret = env('MONGONAUT_AUTH_SECRET', '').trim();
+	const secret = rawSecret.length >= MIN_AUTH_SECRET_LENGTH ? rawSecret : null;
+	const sessionTtlSeconds = envInt('MONGONAUT_SESSION_TTL', 60 * 60 * 24, {
+		min: 60,
+		max: 60 * 60 * 24 * 365,
+	});
 	const staticPassword = env('MONGONAUT_AUTH_PASSWORD', '').trim() || null;
 	const oidc = mode === 'OIDC' ? readOidc() : null;
 
-	if (mode !== 'NONE' && !secret) {
+	if (mode !== 'NONE' && rawSecret && !secret) {
+		console.error(
+			`[auth] MONGONAUT_AUTH_SECRET is only ${rawSecret.length} characters long, at least ${MIN_AUTH_SECRET_LENGTH} are required. Auth is disabled until it is replaced, generate one with: openssl rand -hex 32`,
+		);
+	}
+	if (mode !== 'NONE' && !rawSecret) {
 		console.error(
 			'[auth] MONGONAUT_AUTH_SECRET must be set when MONGONAUT_AUTH_MODE is not NONE. Auth is disabled until configured.',
 		);

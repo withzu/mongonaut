@@ -1,7 +1,7 @@
 export async function register() {
 	if (process.env.NEXT_RUNTIME !== 'nodejs') return;
 
-	const SENSITIVE = /(SECRET|PASSWORD|CONNECTION_URL|TOKEN)/i;
+	const SENSITIVE = /(SECRET|PASSWORD|CONNECTION_URL|TOKEN|EMAIL)/i;
 
 	const keys = Object.keys(process.env)
 		.filter(k => k.startsWith('MONGONAUT_') || k === 'MONGO_CONNECTION_URL')

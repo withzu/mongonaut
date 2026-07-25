@@ -143,6 +143,8 @@ export interface CreateAccountInput {
 export async function createAccount(input: CreateAccountInput): Promise<AccountDoc> {
 	const collection = await accountsCollection();
 	const now = new Date();
+	const existing = await collection.findOne({ email: normalizeEmail(input.email) });
+	if (existing) throw new DuplicateEmailError();
 	const doc: Omit<AccountDoc, '_id'> = {
 		email: normalizeEmail(input.email),
 		passwordHash: await hashPassword(input.password),
@@ -154,8 +156,13 @@ export async function createAccount(input: CreateAccountInput): Promise<AccountD
 		createdAt: now,
 		updatedAt: now,
 	};
-	const result = await collection.insertOne(doc as AccountDoc);
-	return { ...(doc as AccountDoc), _id: result.insertedId };
+	try {
+		const result = await collection.insertOne(doc as AccountDoc);
+		return { ...(doc as AccountDoc), _id: result.insertedId };
+	} catch (error) {
+		if (isDuplicateKeyError(error)) throw new DuplicateEmailError();
+		throw error;
+	}
 }
 
 export class LastAdminError extends Error {
@@ -166,10 +173,18 @@ export class LastAdminError extends Error {
 }
 
 export interface UpdateAccountInput {
+	email?: string;
 	name?: string;
 	isAdmin?: boolean;
 	disabled?: boolean;
 	grants?: Grant[];
+}
+
+export class DuplicateEmailError extends Error {
+	constructor() {
+		super('Another account already uses this email address');
+		this.name = 'DuplicateEmailError';
+	}
 }
 
 export async function updateAccount(id: string, patch: UpdateAccountInput): Promise<void> {
@@ -186,12 +201,60 @@ export async function updateAccount(id: string, patch: UpdateAccountInput): Prom
 	}
 
 	const update: Partial<AccountDoc> = { updatedAt: new Date() };
+	if (patch.email !== undefined) {
+		const email = normalizeEmail(patch.email);
+		if (email !== account.email) {
+			const taken = await collection.findOne({ email, _id: { $ne: account._id } });
+			if (taken) throw new DuplicateEmailError();
+			update.email = email;
+		}
+	}
 	if (patch.name !== undefined) update.name = patch.name;
 	if (patch.isAdmin !== undefined) update.isAdmin = patch.isAdmin;
 	if (patch.disabled !== undefined) update.disabled = patch.disabled;
 	if (patch.grants !== undefined) update.grants = patch.grants;
 
-	await collection.updateOne({ _id: new ObjectId(id) }, { $set: update });
+	try {
+		await collection.updateOne({ _id: new ObjectId(id) }, { $set: update });
+	} catch (error) {
+		// The unique index is the authority in case of a concurrent rename.
+		if (isDuplicateKeyError(error)) throw new DuplicateEmailError();
+		throw error;
+	}
+}
+
+function isDuplicateKeyError(error: unknown): boolean {
+	return !!error && typeof error === 'object' && (error as { code?: number }).code === 11000;
+}
+
+/**
+ * Claim the one-time initial setup. The upsert is atomic, so two parallel setup
+ * requests cannot both create a first administrator.
+ */
+export async function claimInitialSetup(): Promise<boolean> {
+	const controller = getMongoController();
+	const connection = await controller.ensureConnection();
+	if (!connection.success) {
+		throw new Error(connection.error);
+	}
+	const meta = controller.client.db(INTERNAL_DB).collection('meta');
+	const result = await meta.updateOne(
+		{ _id: 'setup' as unknown as ObjectId },
+		{ $setOnInsert: { claimedAt: new Date() } },
+		{ upsert: true },
+	);
+	return result.upsertedCount === 1;
+}
+
+/** Release the setup claim so a failed first attempt can be retried. */
+export async function releaseInitialSetup(): Promise<void> {
+	const controller = getMongoController();
+	const connection = await controller.ensureConnection();
+	if (!connection.success) return;
+	await controller.client
+		.db(INTERNAL_DB)
+		.collection('meta')
+		.deleteOne({ _id: 'setup' as unknown as ObjectId });
 }
 
 export async function setAccountPassword(id: string, password: string): Promise<void> {

@@ -9,8 +9,8 @@ export interface MongoServerInfo {
 
 export interface Collection {
 	name: string;
-	totalSize: number;
-	documentCount: number;
+	totalSize: number | null;
+	documentCount: number | null;
 	canWrite?: boolean;
 }
 
@@ -28,6 +28,15 @@ export interface CollectionStats {
 	avgObjSize: number;
 }
 
+export interface IndexSummary {
+	name: string;
+	keys: Record<string, unknown>;
+	unique: boolean;
+	sparse: boolean;
+	ttlSeconds?: number;
+	size?: number;
+}
+
 export interface DatabaseStats {
 	db: string;
 	collections: number;
@@ -43,9 +52,4 @@ export interface DatabaseStats {
 	fsUsedSize: number;
 	fsTotalSize: number;
 	ok: number;
-}
-
-export interface MongoDocument {
-	_id: string | { $oid: string };
-	[key: string]: unknown;
 }

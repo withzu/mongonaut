@@ -2,7 +2,7 @@
 
 import { PencilIcon, TrashIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { JsonEditorProps as LibJsonEditorProps } from 'json-edit-react';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,6 @@ import {
 } from '@/components/ui/alert-dialog';
 
 interface JsonDocument {
-	_id?: string | { $oid: string };
 	[key: string]: unknown;
 }
 
@@ -33,47 +32,44 @@ interface ReadonlyJsonEditorProps extends LibJsonEditorProps {
 
 const MemoizedJsonEditor = memo<ReadonlyJsonEditorProps>(ClientJsonEditor);
 
-export function DocumentView({ data, isReadonly }: { data: string; isReadonly: boolean }) {
+export function DocumentView({
+	data,
+	documentIdJson,
+	database,
+	collection,
+	isReadonly,
+}: {
+	data: string;
+	documentIdJson: string | null;
+	database: string;
+	collection: string;
+	isReadonly: boolean;
+}) {
 	const [isDeleting, setIsDeleting] = useState(false);
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 	const [showEditor, setShowEditor] = useState(false);
 	const router = useRouter();
-	const params = useParams();
 
 	const document = useMemo<JsonDocument>(() => JSON.parse(data), [data]);
-	const prettyDocument = useMemo(() => JSON.stringify(document, null, 2), [document]);
-	const documentId = useMemo(() => {
-		if (document._id == null) return undefined;
-		if (typeof document._id === 'object' && '$oid' in document._id) {
-			return document._id.$oid;
-		}
-		return document._id as string;
-	}, [document]);
 
-	// Aggregation results may not carry a real _id (e.g. after $group/$project);
-	// such documents can't be written back, so they are shown read-only.
-	const isEditable = !isReadonly && documentId !== undefined;
+	const isEditable = !isReadonly && documentIdJson !== null;
 
 	const handleDelete = async () => {
-		if (!documentId || !isEditable) return;
+		if (!documentIdJson || !isEditable) return;
 
 		setIsDeleting(true);
 		try {
-			const result = await deleteDocument(
-				params.database as string,
-				params.collection as string,
-				documentId,
-			);
+			const result = await deleteDocument(database, collection, documentIdJson);
 
-			if (result.success && result.deleted) {
+			if (result.success) {
 				toast.success('Document deleted');
 				router.refresh();
 			} else {
-				toast.error('Error deleting document');
+				toast.error(result.error);
 			}
 		} catch (error) {
 			console.error('Error deleting document:', error);
-			toast.error('Error deleting document');
+			toast.error(error instanceof Error ? error.message : 'Error deleting document');
 		} finally {
 			setIsDeleting(false);
 			setShowDeleteDialog(false);
@@ -120,10 +116,10 @@ export function DocumentView({ data, isReadonly }: { data: string; isReadonly: b
 					mode="edit"
 					open={showEditor}
 					onOpenChange={setShowEditor}
-					database={params.database as string}
-					collection={params.collection as string}
-					initialValue={prettyDocument}
-					documentId={documentId}
+					database={database}
+					collection={collection}
+					initialValue={data}
+					documentIdJson={documentIdJson}
 				/>
 			)}
 

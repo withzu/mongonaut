@@ -17,6 +17,12 @@ export default async function AppLayout({ children }: Readonly<AppLayoutProps>) 
 				} as React.CSSProperties
 			}
 		>
+			<a
+				href="#main-content"
+				className="bg-background text-foreground focus:ring-ring sr-only z-100 rounded-md border px-3 py-2 text-sm focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:ring-2"
+			>
+				Skip to content
+			</a>
 			<DatabaseFetcher>{children}</DatabaseFetcher>
 			<RecoveryGate />
 		</SidebarProvider>

@@ -1,12 +1,13 @@
 'use client';
 
-import { Fragment, ReactNode, useState } from 'react';
+import { Fragment, ReactNode, useId, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
 	ChevronDownIcon,
 	CopyIcon,
 	DownloadIcon,
 	EraserIcon,
+	KeyRoundIcon,
 	PencilIcon,
 	SquareArrowOutUpRightIcon,
 	Trash2Icon,
@@ -34,26 +35,19 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
 	deleteAllDocuments,
 	dropCollection,
 	duplicateCollection,
-	getDatabaseCollectionAllDocumentsJson,
+	exportCollection,
+	listIndexes,
 	renameCollection,
 } from '@/actions/databaseOperation';
 import { useDatabaseFetcher } from '@/components/custom/database-fetcher';
+import { ConfirmNameDialog } from '@/components/custom/confirm-name-dialog';
+import { IndexManagerDialog, type IndexRequest } from '@/components/custom/index-manager';
 
 interface CollectionActionsOptions {
 	database: string;
@@ -82,12 +76,16 @@ function useCollectionActions({
 	const router = useRouter();
 	const pathname = usePathname();
 	const { reloadData } = useDatabaseFetcher();
+	const nameInputId = useId();
 
 	const [nameDialog, setNameDialog] = useState<NameDialog>(null);
 	const [nameValue, setNameValue] = useState('');
 	const [showDropDialog, setShowDropDialog] = useState(false);
 	const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+	const [indexRequest, setIndexRequest] = useState<IndexRequest | null>(null);
 	const [isBusy, setIsBusy] = useState(false);
+
+	const requestIndexes = () => setIndexRequest(listIndexes(database, collection));
 
 	const collectionPath = `/${database}/${collection}`;
 	const isOnThisCollection = decodeURIComponent(pathname) === collectionPath;
@@ -104,11 +102,12 @@ function useCollectionActions({
 	const handleDownload = async () => {
 		setIsBusy(true);
 		try {
-			const result = await getDatabaseCollectionAllDocumentsJson(database, collection);
+			const result = await exportCollection(database, collection);
 			if (!result.success) {
-				throw result.error || new Error('Failed to fetch documents');
+				toast.error(result.error);
+				return;
 			}
-			const blob = new Blob([result.json], { type: 'application/json' });
+			const blob = new Blob([result.data.json], { type: 'application/json' });
 			const url = URL.createObjectURL(blob);
 			const link = document.createElement('a');
 			link.href = url;
@@ -117,10 +116,16 @@ function useCollectionActions({
 			link.click();
 			link.remove();
 			URL.revokeObjectURL(url);
-			toast.success('Documents downloaded');
+			if (result.data.truncated) {
+				toast.warning(
+					`Exported the first ${result.data.limit} documents. Raise MONGONAUT_EXPORT_MAX_DOCUMENTS for more.`,
+				);
+			} else {
+				toast.success(`${result.data.count} documents downloaded`);
+			}
 		} catch (error) {
 			console.error('Error downloading documents:', error);
-			toast.error('Error downloading documents');
+			toast.error(error instanceof Error ? error.message : 'Error downloading documents');
 		} finally {
 			setIsBusy(false);
 		}
@@ -143,24 +148,25 @@ function useCollectionActions({
 				const result = await renameCollection(database, collection, newName);
 				if (result.success) {
 					toast.success(`Collection renamed to "${newName}"`);
+					setNameDialog(null);
 					await refreshAfterChange(isOnThisCollection ? `/${database}/${newName}` : undefined);
 				} else {
-					toast.error(String(result.error) || 'Failed to rename collection');
+					toast.error(result.error);
 				}
 			} else if (nameDialog === 'duplicate') {
 				const result = await duplicateCollection(database, collection, newName);
 				if (result.success) {
 					toast.success(`Collection duplicated to "${newName}"`);
+					setNameDialog(null);
 					await refreshAfterChange();
 				} else {
-					toast.error(String(result.error) || 'Failed to duplicate collection');
+					toast.error(result.error);
 				}
 			}
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'An unknown error occurred');
 		} finally {
 			setIsBusy(false);
-			setNameDialog(null);
 		}
 	};
 
@@ -172,7 +178,7 @@ function useCollectionActions({
 				toast.success(`Collection "${collection}" dropped`);
 				await refreshAfterChange(isOnThisCollection ? '/' : undefined);
 			} else {
-				toast.error(String(result.error) || 'Failed to drop collection');
+				toast.error(result.error);
 			}
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'An unknown error occurred');
@@ -188,17 +194,17 @@ function useCollectionActions({
 			const result = await deleteAllDocuments(database, collection);
 			if (result.success) {
 				toast.success(
-					result.deletedCount > 0
-						? `${result.deletedCount} documents deleted`
+					result.data.deletedCount > 0
+						? `${result.data.deletedCount} documents deleted`
 						: 'No documents to delete',
 				);
 				await refreshAfterChange();
 			} else {
-				throw result.error || new Error('Failed to delete documents');
+				toast.error(result.error);
 			}
 		} catch (error) {
 			console.error('Error deleting documents:', error);
-			toast.error('Error deleting documents');
+			toast.error(error instanceof Error ? error.message : 'Error deleting documents');
 		} finally {
 			setIsBusy(false);
 			setShowDeleteAllDialog(false);
@@ -215,12 +221,20 @@ function useCollectionActions({
 			onSelect: () => router.push(collectionPath),
 		});
 	}
-	actions.push({
-		key: 'download',
-		label: 'Download as JSON',
-		icon: <DownloadIcon />,
-		onSelect: handleDownload,
-	});
+	actions.push(
+		{
+			key: 'download',
+			label: 'Download as JSON',
+			icon: <DownloadIcon />,
+			onSelect: handleDownload,
+		},
+		{
+			key: 'indexes',
+			label: 'Indexes…',
+			icon: <KeyRoundIcon />,
+			onSelect: requestIndexes,
+		},
+	);
 
 	if (!readOnly) {
 		actions.push(
@@ -270,11 +284,11 @@ function useCollectionActions({
 						</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-2">
-						<label htmlFor="collectionNewName" className="text-sm font-medium">
+						<label htmlFor={nameInputId} className="text-sm font-medium">
 							{nameDialog === 'rename' ? 'New name' : 'Target collection name'}
 						</label>
 						<Input
-							id="collectionNewName"
+							id={nameInputId}
 							value={nameValue}
 							onChange={e => setNameValue(e.target.value)}
 							onKeyDown={e => {
@@ -297,41 +311,46 @@ function useCollectionActions({
 				</DialogContent>
 			</Dialog>
 
-			<AlertDialog open={showDeleteAllDialog} onOpenChange={setShowDeleteAllDialog}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Delete all documents</AlertDialogTitle>
-						<AlertDialogDescription>
-							This will permanently delete every document in &quot;{collection}&quot;. This action
-							cannot be undone.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction onClick={handleDeleteAll} disabled={isBusy}>
-							Delete all
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			<ConfirmNameDialog
+				open={showDeleteAllDialog}
+				onOpenChange={setShowDeleteAllDialog}
+				title="Delete all documents"
+				description={
+					<>
+						This permanently deletes every document in &quot;{collection}&quot;. The collection and
+						its indexes stay in place. This cannot be undone.
+					</>
+				}
+				expectedName={collection}
+				confirmLabel="Delete all"
+				busy={isBusy}
+				onConfirm={handleDeleteAll}
+			/>
 
-			<AlertDialog open={showDropDialog} onOpenChange={setShowDropDialog}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Drop collection</AlertDialogTitle>
-						<AlertDialogDescription>
-							This will permanently delete the collection &quot;{collection}&quot; and all of its
-							documents and indexes. This action cannot be undone.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction onClick={handleDrop} disabled={isBusy}>
-							Drop collection
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
+			<ConfirmNameDialog
+				open={showDropDialog}
+				onOpenChange={setShowDropDialog}
+				title="Drop collection"
+				description={
+					<>
+						This permanently deletes the collection &quot;{collection}&quot; with all of its
+						documents and indexes. This cannot be undone.
+					</>
+				}
+				expectedName={collection}
+				confirmLabel="Drop collection"
+				busy={isBusy}
+				onConfirm={handleDrop}
+			/>
+
+			<IndexManagerDialog
+				request={indexRequest}
+				database={database}
+				collection={collection}
+				readOnly={readOnly}
+				onClose={() => setIndexRequest(null)}
+				onReload={requestIndexes}
+			/>
 		</>
 	);
 

@@ -8,6 +8,7 @@ import {
 	sha256Base64Url,
 	signPayload,
 } from '@/lib/auth/session';
+import { safeInternalPath } from '@/lib/auth/redirect';
 
 export const runtime = 'nodejs';
 
@@ -18,14 +19,6 @@ interface OidcFlowState {
 	redirectUri: string;
 	next: string;
 	exp: number;
-}
-
-function safeNext(value: string | null | undefined): string {
-	if (!value) return '/';
-	if (!value.startsWith('/')) return '/';
-	if (value.startsWith('//')) return '/';
-	if (value.startsWith('/login')) return '/';
-	return value;
 }
 
 function resolveRedirectUri(req: NextRequest, override: string | null): string {
@@ -41,7 +34,7 @@ export async function GET(req: NextRequest) {
 	}
 
 	const url = new URL(req.url);
-	const next = safeNext(url.searchParams.get('next'));
+	const next = safeInternalPath(url.searchParams.get('next'));
 
 	const state = randomToken(24);
 	const nonce = randomToken(24);

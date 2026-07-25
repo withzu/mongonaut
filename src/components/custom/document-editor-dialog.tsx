@@ -1,17 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Loader2, UploadIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { addDocument, updateDocument } from '@/actions/databaseOperation';
+import { addDocuments, updateDocument } from '@/actions/databaseOperation';
 import {
 	isValidJson,
 	JsonCodeEditor,
 	JsonValidityBadge,
 } from '@/components/custom/json-code-editor';
-import type { MongoDocument } from '@/lib/types/mongo';
 import {
 	Dialog,
 	DialogContent,
@@ -30,13 +29,16 @@ interface DocumentEditorDialogProps {
 	database: string;
 	collection: string;
 	initialValue: string;
-	documentId?: string;
+	/** Extended JSON of the `_id` being edited. Required in edit mode. */
+	documentIdJson?: string | null;
 }
 
 const COPY: Record<DocumentEditorMode, { title: string; submit: string }> = {
-	create: { title: 'Add a new document', submit: 'Add document' },
+	create: { title: 'Add documents', submit: 'Insert' },
 	edit: { title: 'Edit document', submit: 'Save changes' },
 };
+
+const MAX_IMPORT_BYTES = 8 * 1024 * 1024;
 
 export function DocumentEditorDialog({
 	mode,
@@ -45,11 +47,12 @@ export function DocumentEditorDialog({
 	database,
 	collection,
 	initialValue,
-	documentId,
+	documentIdJson,
 }: DocumentEditorDialogProps) {
 	const router = useRouter();
 	const [jsonInput, setJsonInput] = useState(initialValue);
 	const [isSaving, setIsSaving] = useState(false);
+	const fileInput = useRef<HTMLInputElement>(null);
 
 	const [wasOpen, setWasOpen] = useState(open);
 	if (open !== wasOpen) {
@@ -60,6 +63,20 @@ export function DocumentEditorDialog({
 	const isValid = isValidJson(jsonInput);
 	const isDirty = jsonInput !== initialValue;
 
+	const handleFile = async (file: File) => {
+		if (file.size > MAX_IMPORT_BYTES) {
+			toast.error('The file is larger than 8 MB. Please split it into smaller files.');
+			return;
+		}
+		const text = await file.text();
+		if (!isValidJson(text)) {
+			toast.error('That file does not contain valid JSON');
+			return;
+		}
+		setJsonInput(text);
+		toast.success(`Loaded ${file.name}`);
+	};
+
 	const handleSubmit = async () => {
 		if (!isValid) {
 			toast.error('Please provide valid JSON before saving');
@@ -68,41 +85,38 @@ export function DocumentEditorDialog({
 
 		setIsSaving(true);
 		try {
-			const parsed = JSON.parse(jsonInput);
-
 			if (mode === 'create') {
-				const result = await addDocument(database, collection, JSON.stringify(parsed));
+				const result = await addDocuments(database, collection, jsonInput);
 				if (result.success) {
-					toast.success('Document added');
+					toast.success(
+						result.data.insertedCount === 1
+							? 'Document added'
+							: `${result.data.insertedCount} documents added`,
+					);
 					onOpenChange(false);
 					router.refresh();
 				} else {
-					toast.error(`Error: ${result.error?.message || 'Unknown error'}`);
+					toast.error(result.error);
 				}
 				return;
 			}
 
-			if (!documentId) {
+			if (!documentIdJson) {
 				toast.error('Cannot update a document without an id');
 				return;
 			}
 
-			const result = await updateDocument(
-				database,
-				collection,
-				documentId,
-				parsed as MongoDocument,
-			);
-			if (result.success && result.updated) {
-				toast.success('Document updated');
+			const result = await updateDocument(database, collection, documentIdJson, jsonInput);
+			if (result.success) {
+				toast.success(result.data.modified ? 'Document updated' : 'No changes were needed');
 				onOpenChange(false);
 				router.refresh();
 			} else {
-				toast.error(`Error: ${result.error?.message || 'No changes were saved'}`);
+				toast.error(result.error);
 			}
 		} catch (error) {
 			console.error(error);
-			toast.error('Invalid JSON format');
+			toast.error(error instanceof Error ? error.message : 'Could not save the document');
 		} finally {
 			setIsSaving(false);
 		}
@@ -117,18 +131,52 @@ export function DocumentEditorDialog({
 					<DialogTitle>{copy.title}</DialogTitle>
 					<DialogDescription>
 						{mode === 'create'
-							? `Create a new document in the ${collection} collection using JSON format`
-							: `Editing a document in the ${collection} collection`}
+							? `Insert one document or a JSON array of documents into "${collection}".`
+							: `Editing a document in "${collection}".`}
 					</DialogDescription>
 				</DialogHeader>
+
+				<p className="text-muted-foreground text-xs">
+					Values use MongoDB Extended JSON, so types are preserved:{' '}
+					<code className="bg-muted rounded px-1 py-0.5 font-mono">{'{ "$oid": "…" }'}</code> for an
+					ObjectId,{' '}
+					<code className="bg-muted rounded px-1 py-0.5 font-mono">{'{ "$date": "…" }'}</code> for a
+					date.
+				</p>
 
 				<div className="h-[500px] border rounded-md overflow-hidden">
 					<JsonCodeEditor value={jsonInput} onChange={setJsonInput} />
 				</div>
 
 				<DialogFooter className="w-full">
-					<div className="flex justify-between items-center w-full">
-						<JsonValidityBadge valid={isValid} />
+					<div className="flex flex-wrap items-center justify-between gap-2 w-full">
+						<div className="flex items-center gap-2">
+							<JsonValidityBadge valid={isValid} />
+							{mode === 'create' && (
+								<>
+									<input
+										ref={fileInput}
+										type="file"
+										accept="application/json,.json"
+										className="hidden"
+										onChange={event => {
+											const file = event.target.files?.[0];
+											event.target.value = '';
+											if (file) void handleFile(file);
+										}}
+									/>
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={() => fileInput.current?.click()}
+									>
+										<UploadIcon size={14} />
+										Import file
+									</Button>
+								</>
+							)}
+						</div>
 						<div className="flex gap-2">
 							<Button variant="outline" onClick={() => onOpenChange(false)}>
 								Cancel

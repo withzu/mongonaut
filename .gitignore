@@ -33,6 +33,7 @@ yarn-error.log*
 # env files
 .env
 .env.development
+.env*.local
 
 # vercel
 .vercel
@@ -49,3 +50,6 @@ next-env.d.ts
 
 package-lock.json
 yarn.lock
+
+# impeccable live mode session state
+/.impeccable/live/sessions/

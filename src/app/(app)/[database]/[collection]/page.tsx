@@ -7,7 +7,6 @@ import {
 	TableIcon,
 	TriangleAlertIcon,
 } from 'lucide-react';
-import prettyBytes from 'next/dist/lib/pretty-bytes';
 import { notFound } from 'next/navigation';
 import {
 	Breadcrumb,
@@ -18,11 +17,10 @@ import {
 } from '@/components/ui/breadcrumb';
 import { AppContainer } from '@/components/custom/app-container';
 import {
-	aggregateInCollection,
-	findInCollection,
-	getDatabaseCollectionContent,
-	getDatabaseCollectionStats,
-	isDatabaseCollectionExisting,
+	collectionExists,
+	getCollectionStats,
+	loadDocuments,
+	type DocumentPage,
 } from '@/actions/databaseOperation';
 import { getResourcePermissions } from '@/lib/auth/server';
 import { DocumentView } from '@/components/custom/document-view';
@@ -30,7 +28,7 @@ import { QueryPanel } from '@/components/custom/query-panel';
 import { CollectionActionsMenu } from '@/components/custom/collection-actions';
 import { PaginationControls } from '@/components/custom/pagination-controls';
 import { AddDocumentButton } from '@/components/custom/add-document-button';
-import type { Document, WithId } from 'mongodb';
+import { formatBytes, formatCount } from '@/lib/utils';
 
 type Props = {
 	params: Promise<{
@@ -52,50 +50,39 @@ const CollectionDetailPage: FC<Props> = async ({ params, searchParams }) => {
 	const { database, collection } = await params;
 	const query = await searchParams;
 
-	const currentPage = query?.page ? parseInt(query.page) : 1;
-	const pageSize = query?.pageSize ? parseInt(query.pageSize) : 20;
-
 	const { canRead, canWrite } = await getResourcePermissions(database, collection);
 	if (!canRead) {
 		notFound();
 	}
 
-	if (!(await isDatabaseCollectionExisting(database, collection))) {
+	if (!(await collectionExists(database, collection))) {
 		notFound();
 	}
 
 	const isReadonly = !canWrite;
-	const stats = await getDatabaseCollectionStats(database, collection);
+	const statsResult = await getCollectionStats(database, collection);
+	const stats = statsResult.success ? statsResult.data : null;
 
-	const isAggregate = query?.mode === 'aggregate' && !!query?.pipeline;
-	const isFind = query?.mode === 'find' || !!query?.filter || !!query?.sort;
+	const mode =
+		query?.mode === 'aggregate' && query?.pipeline
+			? 'aggregate'
+			: query?.mode === 'find' || query?.filter || query?.sort
+				? 'find'
+				: 'browse';
 
-	let content;
-	let queryError: string | undefined;
-	if (isAggregate) {
-		const result = await aggregateInCollection(
-			database,
-			collection,
-			query!.pipeline!,
-			currentPage,
-			pageSize,
-		);
-		content = result;
-		if (!result.success) queryError = result.error?.message;
-	} else if (isFind) {
-		const result = await findInCollection(
-			database,
-			collection,
-			query?.filter || '',
-			query?.sort || '',
-			currentPage,
-			pageSize,
-		);
-		content = result;
-		if (!result.success) queryError = result.error?.message;
-	} else {
-		content = await getDatabaseCollectionContent(database, collection, currentPage, pageSize);
-	}
+	const result = await loadDocuments({
+		database,
+		collection,
+		mode,
+		filter: query?.filter,
+		sort: query?.sort,
+		pipeline: query?.pipeline,
+		page: query?.page,
+		pageSize: query?.pageSize,
+	});
+
+	const content: DocumentPage | null = result.success ? result.data : null;
+	const queryError = result.success ? undefined : result.error;
 
 	return (
 		<AppContainer>
@@ -127,20 +114,20 @@ const CollectionDetailPage: FC<Props> = async ({ params, searchParams }) => {
 						<div className="flex items-center gap-2">
 							<DatabaseIcon size={14} className="text-primary" />
 							<span className="text-muted-foreground">Documents:</span>
-							<span className="font-medium">{stats.count}</span>
+							<span className="font-medium">{formatCount(stats.count)}</span>
 						</div>
 
 						<div className="flex items-center gap-2">
 							<HardDriveIcon size={14} className="text-primary" />
 							<span className="text-muted-foreground">Size:</span>
-							<span className="font-medium">{prettyBytes(stats.size)}</span>
+							<span className="font-medium">{formatBytes(stats.size)}</span>
 						</div>
 
-						{stats.avgObjSize && (
+						{stats.avgObjSize > 0 && (
 							<div className="flex items-center gap-2">
 								<BoxIcon size={14} className="text-primary" />
 								<span className="text-muted-foreground">Avg. Size:</span>
-								<span className="font-medium">{prettyBytes(stats.avgObjSize)}</span>
+								<span className="font-medium">{formatBytes(stats.avgObjSize)}</span>
 							</div>
 						)}
 
@@ -155,55 +142,59 @@ const CollectionDetailPage: FC<Props> = async ({ params, searchParams }) => {
 				)}
 
 				<QueryPanel
-					defaultMode={isAggregate ? 'aggregate' : 'find'}
+					defaultMode={mode === 'aggregate' ? 'aggregate' : 'find'}
 					defaultFilter={query?.filter}
 					defaultSort={query?.sort}
 					defaultPipeline={query?.pipeline}
 				/>
 
-				{!isReadonly && <AddDocumentButton />}
+				{!isReadonly && <AddDocumentButton database={database} collection={collection} />}
 
 				{queryError ? (
-					<div className="flex flex-col items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 py-10 text-center">
+					<div
+						role="alert"
+						className="flex flex-col items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 py-10 text-center"
+					>
 						<TriangleAlertIcon className="mb-3 h-12 w-12 text-destructive" />
 						<h3 className="mb-1 font-medium">Query failed</h3>
-						<p className="max-w-xl text-sm text-muted-foreground">{queryError}</p>
+						<p className="max-w-xl text-sm text-muted-foreground break-words">{queryError}</p>
 					</div>
-				) : (content?.documents?.length || 0) > 0 ? (
-					(content?.documents as WithId<Document>[]).map((doc, index) => {
-						const rawId = doc._id as unknown;
-						const documentId =
-							rawId && typeof rawId === 'object' && '$oid' in (rawId as Record<string, unknown>)
-								? String((rawId as { $oid: unknown }).$oid)
-								: rawId != null
-									? String(rawId)
-									: `result-${index}`;
-
-						return (
-							<DocumentView key={documentId} data={JSON.stringify(doc)} isReadonly={isReadonly} />
-						);
-					})
+				) : (content?.documents.length || 0) > 0 ? (
+					content!.documents.map((entry, index) => (
+						<DocumentView
+							key={entry.idJson ?? `result-${index}`}
+							data={entry.json}
+							documentIdJson={entry.idJson}
+							database={database}
+							collection={collection}
+							isReadonly={isReadonly}
+						/>
+					))
 				) : (
 					<div className="flex flex-col items-center justify-center py-10 text-center border rounded-lg">
 						<FilterXIcon className="w-12 h-12 mb-3 text-muted-foreground" />
 						<h3 className="mb-1 font-medium">No results found</h3>
 						<p className="text-sm text-muted-foreground">
-							{isAggregate
+							{mode === 'aggregate'
 								? 'The aggregation pipeline returned no documents'
-								: isFind
+								: mode === 'find'
 									? 'No documents match this query'
 									: 'This collection contains no documents'}
 						</p>
 					</div>
 				)}
 
-				<PaginationControls
-					currentPage={currentPage}
-					totalPages={content?.pagination.totalPages || 0}
-					pageSize={content?.pagination.pageSize || 0}
-					total={content?.pagination.total || 0}
-					query={query}
-				/>
+				{content && (
+					<PaginationControls
+						currentPage={content.page}
+						pageSize={content.pageSize}
+						total={content.total}
+						totalPages={content.totalPages}
+						hasMore={content.hasMore}
+						shownCount={content.documents.length}
+						query={query}
+					/>
+				)}
 			</div>
 		</AppContainer>
 	);

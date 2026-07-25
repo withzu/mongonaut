@@ -27,6 +27,11 @@ export async function getDiscovery(issuer: string): Promise<DiscoveryDocument> {
 	if (!doc.authorization_endpoint || !doc.token_endpoint || !doc.jwks_uri) {
 		throw new Error('OIDC discovery document is missing required fields');
 	}
+	if (doc.issuer && doc.issuer.replace(/\/$/, '') !== issuer) {
+		throw new Error(
+			`OIDC issuer mismatch: configured "${issuer}", discovery returned "${doc.issuer}"`,
+		);
+	}
 	discoveryCache.set(issuer, { doc, fetchedAt: Date.now() });
 	return doc;
 }
@@ -142,8 +147,20 @@ export async function verifyIdToken(
 	return payload as VerifiedIdToken;
 }
 
-export function isEmailAllowed(cfg: OidcConfig, email: string | undefined): boolean {
+/**
+ * Check the optional email allowlist.
+ *
+ * When an allowlist is configured the address has to be verified by the
+ * provider. Otherwise an identity provider that lets users choose an arbitrary
+ * unverified email would let anyone claim an allowlisted address.
+ */
+export function isEmailAllowed(
+	cfg: OidcConfig,
+	email: string | undefined,
+	emailVerified: boolean | undefined,
+): boolean {
 	if (!cfg.allowedEmails || cfg.allowedEmails.length === 0) return true;
 	if (!email) return false;
+	if (emailVerified === false) return false;
 	return cfg.allowedEmails.includes(email.toLowerCase());
 }

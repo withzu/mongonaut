@@ -13,7 +13,7 @@ interface DatabaseContentProps {
 	canCreateDatabase?: boolean;
 	globalReadonly?: boolean;
 	children: ReactNode;
-	error?: Error;
+	error?: string;
 	loading?: boolean;
 }
 
@@ -43,7 +43,7 @@ export function DatabaseContent({
 				serverInfo={serverInfo}
 				loading={loading}
 			/>
-			<SidebarInset>
+			<SidebarInset id="main-content">
 				<div className="min-h-full w-full">{children}</div>
 			</SidebarInset>
 		</>

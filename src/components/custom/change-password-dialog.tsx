@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { cloneElement, FormEvent, useId, useState, type ReactElement } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -154,11 +154,14 @@ export function ChangePasswordDialog({
 	);
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: string; children: ReactElement<{ id?: string }> }) {
+	const id = useId();
 	return (
 		<div className="flex flex-col gap-2">
-			<label className="text-sm font-medium">{label}</label>
-			{children}
+			<label htmlFor={id} className="text-sm font-medium">
+				{label}
+			</label>
+			{cloneElement(children, { id })}
 		</div>
 	);
 }

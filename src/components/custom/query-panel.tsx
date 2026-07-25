@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import CodeMirror from '@uiw/react-codemirror';
 import { json } from '@codemirror/lang-json';
@@ -16,12 +16,13 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { usePreferredTheme } from '@/lib/utils';
+import { usePreferredTheme } from '@/hooks/use-preferred-theme';
+import { escapeRegex } from '@/lib/utils';
 
 type QueryMode = 'find' | 'aggregate';
 type FindInput = 'builder' | 'json';
 
-type Operator = 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'in' | 'exists';
+type Operator = 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'contains' | 'regex' | 'in' | 'exists';
 
 interface BuilderRow {
 	field: string;
@@ -44,6 +45,7 @@ const OPERATORS: { value: Operator; label: string }[] = [
 	{ value: 'lt', label: '<' },
 	{ value: 'lte', label: '≤' },
 	{ value: 'contains', label: 'contains' },
+	{ value: 'regex', label: 'regex' },
 	{ value: 'in', label: 'in' },
 	{ value: 'exists', label: 'exists' },
 ];
@@ -53,19 +55,38 @@ const PIPELINE_PLACEHOLDER = `[
   { "$group": { "_id": "$status", "count": { "$sum": 1 } } }
 ]`;
 
-/** Coerce a raw string into a number, boolean, null, or string. */
+const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?Z?)?$/;
+
 function coerce(raw: string): unknown {
 	const trimmed = raw.trim();
 	if (trimmed === '') return '';
+
+	if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
+		return trimmed.slice(1, -1);
+	}
 	if (trimmed === 'true') return true;
 	if (trimmed === 'false') return false;
 	if (trimmed === 'null') return null;
+	if (OBJECT_ID_PATTERN.test(trimmed)) return { $oid: trimmed.toLowerCase() };
+	if (ISO_DATE_PATTERN.test(trimmed)) {
+		const parsed = new Date(trimmed.includes('T') ? trimmed : `${trimmed}T00:00:00Z`);
+		if (!Number.isNaN(parsed.getTime())) return { $date: parsed.toISOString() };
+	}
+
 	const num = Number(trimmed);
-	if (!isNaN(num) && trimmed !== '') return num;
+	if (trimmed !== '' && Number.isFinite(num)) return num;
 	return raw;
 }
 
-/** Compile a single builder row into a MongoDB filter clause. */
+function regexClause(field: string, pattern: string, escape: boolean): Record<string, unknown> {
+	return {
+		[field]: {
+			$regularExpression: { pattern: escape ? escapeRegex(pattern) : pattern, options: 'i' },
+		},
+	};
+}
+
 function rowToClause(row: BuilderRow): Record<string, unknown> | null {
 	const field = row.field.trim();
 	if (!field) return null;
@@ -84,7 +105,9 @@ function rowToClause(row: BuilderRow): Record<string, unknown> | null {
 		case 'lte':
 			return { [field]: { $lte: coerce(row.value) } };
 		case 'contains':
-			return { [field]: { $regex: row.value, $options: 'i' } };
+			return regexClause(field, row.value, true);
+		case 'regex':
+			return regexClause(field, row.value, false);
 		case 'in':
 			return {
 				[field]: {
@@ -118,13 +141,13 @@ export function QueryPanel({
 	const router = useRouter();
 	const theme = usePreferredTheme();
 	const editorTheme = theme === 'dark' ? vscodeDark : 'light';
+	const sortFieldId = useId();
 
-	// A raw filter from the URL can't be reliably reversed into builder rows, so
-	// fall back to the JSON editor when one is present.
 	const hasInitialFilter = !!defaultFilter && defaultFilter !== '{}';
 	const [findInput, setFindInput] = useState<FindInput>(hasInitialFilter ? 'json' : 'builder');
 	const [rows, setRows] = useState<BuilderRow[]>([{ field: '', operator: 'eq', value: '' }]);
 	const [filterJson, setFilterJson] = useState(defaultFilter || '{\n  \n}');
+	const [filterError, setFilterError] = useState<string | null>(null);
 
 	const initialSort = useMemo(() => {
 		if (!defaultSort) return { field: '', direction: '1' };
@@ -167,9 +190,20 @@ export function QueryPanel({
 		} else {
 			const trimmed = filterJson.trim();
 			if (trimmed && trimmed !== '{}') {
+				try {
+					const parsed = JSON.parse(trimmed);
+					if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+						setFilterError('The filter must be a JSON object');
+						return;
+					}
+				} catch {
+					setFilterError('Invalid JSON');
+					return;
+				}
 				params.set('filter', trimmed);
 			}
 		}
+		setFilterError(null);
 
 		if (sortField.trim()) {
 			params.set('sort', JSON.stringify({ [sortField.trim()]: Number(sortDirection) }));
@@ -201,6 +235,7 @@ export function QueryPanel({
 		setFilterJson('{\n  \n}');
 		setSortField('');
 		setSortDirection('1');
+		setFilterError(null);
 		router.push(window.location.pathname);
 	};
 
@@ -252,6 +287,7 @@ export function QueryPanel({
 							{rows.map((row, index) => (
 								<div key={index} className="flex flex-wrap items-center gap-2 md:flex-nowrap">
 									<Input
+										aria-label={`Field for condition ${index + 1}`}
 										placeholder="field (e.g. user.age)"
 										value={row.field}
 										onChange={e => updateRow(index, { field: e.target.value })}
@@ -261,7 +297,10 @@ export function QueryPanel({
 										value={row.operator}
 										onValueChange={value => updateRow(index, { operator: value as Operator })}
 									>
-										<SelectTrigger className="w-28 shrink-0">
+										<SelectTrigger
+											className="w-28 shrink-0"
+											aria-label={`Operator for condition ${index + 1}`}
+										>
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
@@ -273,6 +312,7 @@ export function QueryPanel({
 										</SelectContent>
 									</Select>
 									<Input
+										aria-label={`Value for condition ${index + 1}`}
 										placeholder={
 											row.operator === 'in'
 												? 'a, b, c'
@@ -288,6 +328,7 @@ export function QueryPanel({
 									<Button
 										variant="ghost"
 										size="icon"
+										aria-label={`Remove condition ${index + 1}`}
 										onClick={() => removeRow(index)}
 										disabled={rows.length === 1}
 										className="shrink-0 text-muted-foreground"
@@ -296,10 +337,16 @@ export function QueryPanel({
 									</Button>
 								</div>
 							))}
-							<Button variant="outline" size="sm" onClick={addRow}>
-								<PlusIcon size={14} />
-								Add condition
-							</Button>
+							<div className="flex flex-wrap items-center justify-between gap-2">
+								<Button variant="outline" size="sm" onClick={addRow}>
+									<PlusIcon size={14} />
+									Add condition
+								</Button>
+								<p className="text-muted-foreground text-xs">
+									24 character hex values match an ObjectId, ISO timestamps match a date. Wrap a
+									value in quotes to force a string.
+								</p>
+							</div>
 						</div>
 					) : (
 						<div className="overflow-hidden rounded-md border">
@@ -307,23 +354,35 @@ export function QueryPanel({
 								value={filterJson}
 								height="140px"
 								extensions={[json()]}
-								onChange={setFilterJson}
+								onChange={value => {
+									setFilterJson(value);
+									if (filterError) setFilterError(null);
+								}}
 								theme={editorTheme}
 								basicSetup={{ lineNumbers: true, foldGutter: false }}
 							/>
 						</div>
 					)}
 
+					{filterError && (
+						<p role="alert" className="text-destructive text-xs">
+							{filterError}
+						</p>
+					)}
+
 					<div className="flex flex-wrap items-center gap-2">
-						<span className="text-xs font-medium text-muted-foreground">Sort</span>
+						<label htmlFor={sortFieldId} className="text-xs font-medium text-muted-foreground">
+							Sort
+						</label>
 						<Input
+							id={sortFieldId}
 							placeholder="field"
 							value={sortField}
 							onChange={e => setSortField(e.target.value)}
 							className="h-9 w-48"
 						/>
 						<Select value={sortDirection} onValueChange={setSortDirection}>
-							<SelectTrigger className="w-32">
+							<SelectTrigger className="w-32" aria-label="Sort direction">
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
@@ -354,7 +413,9 @@ export function QueryPanel({
 						/>
 					</div>
 					<div className="flex items-center justify-between gap-2">
-						<span className="text-xs text-destructive">{pipelineError}</span>
+						<span role="alert" className="text-destructive text-xs">
+							{pipelineError}
+						</span>
 						<Button onClick={runAggregate}>
 							<PlayIcon size={14} />
 							Run aggregation

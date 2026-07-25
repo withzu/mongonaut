@@ -21,15 +21,6 @@ interface DatabaseFetcherProps {
 	children: ReactNode;
 }
 
-type ActionResult<T> =
-	| { success: true; data: T; error?: undefined }
-	| { success: false; error: Error; data?: undefined };
-
-interface DbListData {
-	databases: unknown[];
-	totalSize: number;
-}
-
 interface DatabaseFetcherContextType {
 	reloadData: () => Promise<void>;
 }
@@ -49,7 +40,7 @@ export function DatabaseFetcher({ children }: DatabaseFetcherProps) {
 	const [totalSize, setTotalSize] = useState<number | undefined>(undefined);
 	const [serverInfo, setServerInfo] = useState<Document | undefined>(undefined);
 	const [viewer, setViewer] = useState<ViewerInfo | undefined>(undefined);
-	const [error, setError] = useState<Error | undefined>(undefined);
+	const [error, setError] = useState<string | undefined>(undefined);
 	const [initialLoading, setInitialLoading] = useState(true);
 	const [isPending, startTransition] = useTransition();
 
@@ -57,32 +48,27 @@ export function DatabaseFetcher({ children }: DatabaseFetcherProps) {
 		try {
 			const [databasesResult, dbListResult, serverInfoResult, viewerResult] = await Promise.all([
 				collectSidebarDatabaseInformation(),
-				listDatabases() as Promise<ActionResult<DbListData>>,
+				listDatabases(),
 				getServerInfo(),
 				getViewerInfo(),
 			]);
 
 			setViewer(viewerResult);
 
-			if (databasesResult.success && databasesResult.data) {
-				setDatabases(databasesResult.data);
-			} else {
+			if (!databasesResult.success) {
 				setDatabases([]);
-			}
-
-			if (dbListResult.success && dbListResult.data) {
-				setTotalSize(dbListResult.data.totalSize);
-			} else {
 				setTotalSize(undefined);
+				setServerInfo(undefined);
+				setError(databasesResult.error);
+				return;
 			}
 
-			if (serverInfoResult.success && serverInfoResult.data !== undefined) {
-				setServerInfo(serverInfoResult.data);
-			} else {
-				setServerInfo(undefined);
-			}
+			setError(undefined);
+			setDatabases(databasesResult.data);
+			setTotalSize(dbListResult.success ? dbListResult.data.totalSize : undefined);
+			setServerInfo(serverInfoResult.success ? serverInfoResult.data : undefined);
 		} catch (e) {
-			setError(e instanceof Error ? e : new Error('Unknown error'));
+			setError(e instanceof Error ? e.message : 'Unknown error');
 		}
 	};
 
@@ -97,7 +83,7 @@ export function DatabaseFetcher({ children }: DatabaseFetcherProps) {
 
 	const reloadData = async () => {
 		startTransition(() => {
-			fetchAllData();
+			void fetchAllData();
 		});
 	};
 

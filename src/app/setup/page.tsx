@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
+import Image from 'next/image';
 import { AlertCircle } from 'lucide-react';
 import { getAuthConfig } from '@/lib/auth/config';
 import { countAccounts } from '@/lib/auth/accounts';
@@ -30,7 +31,15 @@ function SetupMisconfigured() {
 		<div className="flex min-h-screen w-full items-center justify-center bg-background px-4 py-10">
 			<div className="flex w-full max-w-sm flex-col gap-10">
 				<div className="flex items-center justify-center gap-2.5">
-					<img src="/images/logo.svg" alt="Mongonaut" className="h-12 w-12 dark:invert" />
+					<Image
+						src="/images/logo.svg"
+						alt=""
+						aria-hidden="true"
+						width={48}
+						height={48}
+						className="h-12 w-12 dark:invert"
+						priority
+					/>
 					<span className="text-2xl font-semibold tracking-tight">Mongonaut</span>
 				</div>
 

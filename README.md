@@ -48,20 +48,55 @@ Mongonaut is built with Next.js, React, TypeScript, and the official MongoDB Nod
 
 * Browse MongoDB databases and collections
 * View server, database, and collection information
-* Browse large collections with pagination
+* Browse large collections with pagination and a selectable page size
 * Filter and sort documents with MongoDB queries
 * Run aggregation pipelines
-* Create, edit, and delete documents
+* Create, edit, and delete documents without losing BSON types
+* Import documents from a JSON file and export a collection as JSON
+* View, create, and drop indexes
 * Create, rename, duplicate, and delete collections
 * Delete databases when write access is enabled
 * Use a global read only mode for safer access
 * Protect the interface with built in accounts
+* Grant access per database and collection
 * Use a shared static password for simple internal deployments
 * Connect an OpenID Connect identity provider
 * Restrict OIDC access with an email allowlist
 * Configure session lifetime and login protection
 * Recover administrator access with a temporary password
+* Audit every data and account change to the container log
 * Deploy through GitHub Container Registry on AMD64 and ARM64
+
+### Not included yet
+
+Mongonaut is deliberately small. The following is not available today:
+
+* Multiple MongoDB connections in one instance
+* `explain()` output and query plan analysis
+* Field projections, multi field sorting, and bulk updates
+* Two factor authentication and a session overview
+* GridFS, change streams, and server side user management
+
+## Document Format
+
+Documents are shown and edited as
+[MongoDB Extended JSON](https://www.mongodb.com/docs/manual/reference/mongodb-extended-json/), so
+types survive editing. An ObjectId reference stays an ObjectId, a date stays a date, and a 64 bit
+integer keeps its exact value.
+
+```json
+{
+  "_id": { "$oid": "66b3f1c2a4e8d90f12345678" },
+  "createdAt": { "$date": "2024-08-07T10:15:00.000Z" },
+  "views": 42,
+  "score": 1.5,
+  "externalId": { "$numberLong": "9007199254740993" }
+}
+```
+
+The same notation works in the query editor, so an `_id` copied out of a document can be pasted
+into a filter unchanged. In the query builder a 24 character hex value is recognized as an ObjectId
+automatically. Wrap a value in double quotes to force a literal string.
 
 ## Quick Start
 
@@ -263,17 +298,36 @@ For stronger protection, use a dedicated MongoDB account with only the required 
 | `MONGO_CONNECTION_URL` | MongoDB connection string used by Mongonaut | `mongodb://localhost:27017` |
 | `MONGONAUT_READONLY` | Disables write operations when set to `true` | `false` |
 | `MONGONAUT_TIMEOUT` | MongoDB connection and server selection timeout in milliseconds | `5000` |
+| `MONGONAUT_QUERY_TIMEOUT` | Upper bound for a single query or pipeline in milliseconds | `15000` |
 
 Set `MONGO_CONNECTION_URL` explicitly when running Mongonaut in a container. The fallback address points to the Mongonaut container itself.
+
+### Limits
+
+| Variable | Description | Default |
+| --- | --- | --- |
+| `MONGONAUT_MAX_PAGE_SIZE` | Largest page size a user can request | `200` |
+| `MONGONAUT_EXPORT_MAX_DOCUMENTS` | Maximum documents in a single JSON export | `50000` |
+| `MONGONAUT_IMPORT_MAX_DOCUMENTS` | Maximum documents a single import inserts | `10000` |
+| `MONGONAUT_ALLOW_SERVER_JS` | Allows `$where`, `$function`, and `$accumulator` | `false` |
+| `MONGONAUT_SIDEBAR_STATS` | Reads per collection size and document count | `true` |
+| `MONGONAUT_SIDEBAR_STATS_MAX_COLLECTIONS` | Skips those statistics above this collection count | `100` |
+| `MONGONAUT_AUDIT_LOG` | Writes one JSON audit line per change to stdout | `true` |
+
+`$where`, `$function`, and `$accumulator` execute JavaScript inside MongoDB. Any user with read
+access could use them to occupy database CPU, so they stay disabled unless you enable them.
 
 ### Authentication
 
 | Variable | Description | Default |
 | --- | --- | --- |
 | `MONGONAUT_AUTH_MODE` | Authentication mode: `NONE`, `STATIC_PASSWORD`, `OIDC`, or `ACCOUNT` | `ACCOUNT` |
-| `MONGONAUT_AUTH_SECRET` | Secret used to protect authentication sessions. Required for every mode except `NONE` | None |
+| `MONGONAUT_AUTH_SECRET` | Secret used to protect authentication sessions. Required for every mode except `NONE`, minimum 32 characters | None |
 | `MONGONAUT_SESSION_TTL` | Session lifetime in seconds | `86400` |
 | `MONGONAUT_AUTH_PASSWORD` | Shared password used by `STATIC_PASSWORD` mode | None |
+
+A secret shorter than 32 characters is rejected and logged as a misconfiguration. Mongonaut then
+refuses all data access until it is replaced.
 
 ### Login Protection
 
@@ -281,11 +335,18 @@ These settings apply to static password and account logins.
 
 | Variable | Description | Default |
 | --- | --- | --- |
-| `MONGONAUT_LOGIN_MAX_ATTEMPTS` | Maximum login attempts per IP within the configured window | `5` |
-| `MONGONAUT_LOGIN_WINDOW_SECONDS` | Per IP attempt window in seconds | `900` |
+| `MONGONAUT_LOGIN_MAX_ATTEMPTS` | Maximum login attempts per client within the configured window | `5` |
+| `MONGONAUT_LOGIN_WINDOW_SECONDS` | Per client attempt window in seconds | `900` |
 | `MONGONAUT_LOGIN_LOCKOUT_SECONDS` | Lockout duration in seconds | `900` |
 | `MONGONAUT_LOGIN_GLOBAL_MAX_ATTEMPTS` | Maximum login attempts across the complete instance within the global window | `50` |
 | `MONGONAUT_LOGIN_GLOBAL_WINDOW_SECONDS` | Global attempt window in seconds | `300` |
+| `MONGONAUT_TRUSTED_PROXY_HOPS` | Number of trusted reverse proxies in front of Mongonaut | `0` |
+
+Per client limits need a trustworthy client address. Since any caller can send an
+`X-Forwarded-For` header, Mongonaut only reads it when `MONGONAUT_TRUSTED_PROXY_HOPS` is at least
+`1`. Set it to the number of proxies you control, for example `1` behind a single nginx, Traefik,
+or Cloudflare Tunnel. With the default of `0` the header is ignored and all direct callers share one
+limit.
 
 ### OpenID Connect
 
@@ -334,7 +395,24 @@ Mongonaut provides direct access to MongoDB data. Treat it like any other admini
 5. Use a dedicated MongoDB account with only the permissions the deployment requires.
 6. Enable read only mode when users do not need to modify data.
 7. Store secrets outside the repository and rotate them when exposure is suspected.
-8. Keep Mongonaut and MongoDB updated.
+8. Set `MONGONAUT_TRUSTED_PROXY_HOPS` when running behind a reverse proxy so per client login limits work.
+9. Leave `MONGONAUT_ALLOW_SERVER_JS` disabled unless you need server side JavaScript in queries.
+10. Collect the audit lines from the container log if you need to know who changed what.
+11. Keep Mongonaut and MongoDB updated.
+
+Mongonaut sends `X-Frame-Options: DENY`, a restrictive `Content-Security-Policy` with
+`frame-ancestors 'none'`, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff` on
+every response.
+
+### Audit Log
+
+Every change to data or accounts writes one JSON line to stdout:
+
+```text
+[mongonaut:audit] {"ts":"2024-08-07T10:15:00.000Z","action":"collection.drop","actor":"account:admin@example.com","outcome":"success","database":"shop","collection":"orders"}
+```
+
+Denied attempts are recorded as well. Set `MONGONAUT_AUDIT_LOG=false` to turn this off.
 
 The documentation includes a guide for securing Mongonaut with [Cloudflare Zero Trust Tunnel](https://mongonaut.org/docs/security/zero-trust-tunnel).
 
@@ -391,6 +469,7 @@ Open `http://localhost:3000`.
 | `pnpm build` | Create a production build |
 | `pnpm start` | Start the production server |
 | `pnpm lint` | Run ESLint |
+| `pnpm typecheck` | Run the TypeScript compiler without emitting output |
 | `pnpm format` | Format supported source files with Prettier |
 | `pnpm test:format` | Check source formatting |
 | `pnpm recovery [email]` | Create a temporary password for an account or all administrators |
@@ -427,6 +506,7 @@ Contributions, bug reports, and feature ideas are welcome.
 
 ```bash
 pnpm lint
+pnpm typecheck
 pnpm test:format
 pnpm build
 ```

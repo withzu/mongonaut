@@ -9,6 +9,8 @@ import {
 	SESSION_COOKIE,
 	verifyPayload,
 } from '@/lib/auth/session';
+import { safeInternalPath } from '@/lib/auth/redirect';
+import { audit } from '@/lib/mongo/audit';
 
 export const runtime = 'nodejs';
 
@@ -76,7 +78,13 @@ export async function GET(req: NextRequest) {
 		return loginErrorRedirect(req, 'token_verification_failed');
 	}
 
-	if (!isEmailAllowed(cfg.oidc, claims.email)) {
+	if (!isEmailAllowed(cfg.oidc, claims.email, claims.email_verified)) {
+		audit({
+			action: 'auth.login',
+			actor: `oidc:${claims.email ?? claims.sub}`,
+			outcome: 'denied',
+			detail: 'email not allowed',
+		});
 		return loginErrorRedirect(req, 'email_not_allowed');
 	}
 
@@ -86,9 +94,13 @@ export async function GET(req: NextRequest) {
 		name: claims.name || claims.preferred_username,
 	});
 
-	const next =
-		flow.next && flow.next.startsWith('/') && !flow.next.startsWith('//') ? flow.next : '/';
-	const target = new URL(next, req.url);
+	audit({
+		action: 'auth.login',
+		actor: `oidc:${claims.email ?? claims.sub}`,
+		outcome: 'success',
+	});
+
+	const target = new URL(safeInternalPath(flow.next), req.url);
 
 	const res = NextResponse.redirect(target);
 	res.cookies.set(SESSION_COOKIE, token, {

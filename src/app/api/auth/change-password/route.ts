@@ -11,7 +11,7 @@ import {
 	checkLoginRateLimit,
 	getClientKey,
 	recordLoginFailure,
-	recordLoginSuccess,
+	retryAfterHeaders,
 } from '@/lib/auth/rate-limit';
 import {
 	findAccountById,
@@ -19,10 +19,10 @@ import {
 	verifyPassword,
 	verifyRecovery,
 } from '@/lib/auth/accounts';
+import { validatePassword } from '@/lib/auth/policy';
+import { audit } from '@/lib/mongo/audit';
 
 export const runtime = 'nodejs';
-
-const MIN_PASSWORD_LENGTH = 8;
 
 interface Body {
 	currentPassword?: unknown;
@@ -46,10 +46,11 @@ export async function POST(req: NextRequest) {
 	}
 
 	const clientKey = getClientKey(req);
-	if (!checkLoginRateLimit(clientKey).allowed) {
+	const limit = checkLoginRateLimit(clientKey);
+	if (!limit.allowed) {
 		return NextResponse.json(
 			{ ok: false, error: 'Too many attempts. Please try again later.' },
-			{ status: 429 },
+			{ status: 429, headers: retryAfterHeaders(limit) },
 		);
 	}
 
@@ -61,22 +62,38 @@ export async function POST(req: NextRequest) {
 		(await verifyPassword(account.passwordHash, currentPassword)) ||
 		(await verifyRecovery(account, currentPassword));
 	if (!currentValid) {
+		// Counts towards the limit, but a wrong current password must not clear the
+		// login counters of an already authenticated session.
 		recordLoginFailure(clientKey);
+		audit({
+			action: 'auth.changePassword',
+			actor: `account:${account.email}`,
+			outcome: 'denied',
+			detail: 'current password incorrect',
+		});
 		return NextResponse.json(
 			{ ok: false, error: 'Current password is incorrect' },
 			{ status: 401 },
 		);
 	}
-	recordLoginSuccess(clientKey);
 
-	if (newPassword.length < MIN_PASSWORD_LENGTH) {
+	const passwordError = validatePassword(newPassword);
+	if (passwordError) {
+		return NextResponse.json({ ok: false, error: passwordError }, { status: 400 });
+	}
+	if (newPassword === currentPassword) {
 		return NextResponse.json(
-			{ ok: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` },
+			{ ok: false, error: 'Please choose a password you have not used before' },
 			{ status: 400 },
 		);
 	}
 
 	await setAccountPassword(account._id.toString(), newPassword);
+	audit({
+		action: 'auth.changePassword',
+		actor: `account:${account.email}`,
+		outcome: 'success',
+	});
 	const newVersion = account.tokenVersion + 1;
 
 	const { token } = await createSessionToken(

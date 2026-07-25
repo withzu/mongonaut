@@ -1,13 +1,19 @@
 import 'server-only';
 
 import { cookies } from 'next/headers';
+import type { Document } from 'mongodb';
 import { getAuthConfig } from '@/lib/auth/config';
 import { readSessionToken, SESSION_COOKIE, type SessionPayload } from '@/lib/auth/session';
 import { findAccountById, INTERNAL_DB, type AccountDoc, type Grant } from '@/lib/auth/accounts';
 import { envBool } from '@/lib/env';
+import { analyzePipeline, hasWriteStage, type PipelineAnalysis } from '@/lib/mongo/pipeline';
 import type { AuthMode } from '@/lib/auth/config';
 
 const MONGO_SYSTEM_DBS = ['admin', 'local', 'config'];
+
+export const READONLY_MESSAGE = 'Mongonaut is running in read-only mode';
+export const DENIED_MESSAGE = 'Access denied';
+export const ADMIN_MESSAGE = 'Administrator access required';
 
 export function isInternalDb(name: string): boolean {
 	return name === INTERNAL_DB;
@@ -17,11 +23,22 @@ export function isHiddenDb(name: string): boolean {
 	return isInternalDb(name) || MONGO_SYSTEM_DBS.includes(name);
 }
 
+export function isGlobalReadonly(): boolean {
+	return envBool('MONGONAUT_READONLY', false);
+}
+
+export function isServerJsAllowed(): boolean {
+	return envBool('MONGONAUT_ALLOW_SERVER_JS', false);
+}
+
 export interface AccessContext {
 	mode: AuthMode;
 	authenticated: boolean;
 	account: AccountDoc | null;
 }
+
+export type GuardFailure = { allowed: false; error: string };
+export type GuardResult = { allowed: true; ctx: AccessContext } | GuardFailure;
 
 async function loadValidAccount(session: SessionPayload): Promise<AccountDoc | null> {
 	if (session.mode !== 'ACCOUNT') return null;
@@ -62,6 +79,19 @@ export async function getAccessContext(): Promise<AccessContext> {
 	return { mode: cfg.mode, authenticated: true, account: null };
 }
 
+export function describeActor(ctx: AccessContext): string {
+	switch (ctx.mode) {
+		case 'ACCOUNT':
+			return ctx.account ? `account:${ctx.account.email}` : 'account:unauthenticated';
+		case 'STATIC_PASSWORD':
+			return ctx.authenticated ? 'static-password' : 'unauthenticated';
+		case 'OIDC':
+			return ctx.authenticated ? 'oidc' : 'unauthenticated';
+		default:
+			return 'auth-disabled';
+	}
+}
+
 function grantAllows(
 	grants: Grant[],
 	database: string,
@@ -86,6 +116,8 @@ export interface AccessRequest {
 
 export function accessAllowed(ctx: AccessContext, req: AccessRequest): boolean {
 	if (req.database && isHiddenDb(req.database)) return false;
+	// Global read-only mode outranks every grant, in every auth mode.
+	if (req.write && isGlobalReadonly()) return false;
 
 	switch (ctx.mode) {
 		case 'NONE':
@@ -104,18 +136,47 @@ export function accessAllowed(ctx: AccessContext, req: AccessRequest): boolean {
 	}
 }
 
-export async function guardAccess(
-	req: AccessRequest,
-): Promise<{ success: false; error: Error } | null> {
+export async function guardAccess(req: AccessRequest): Promise<GuardResult> {
 	const ctx = await getAccessContext();
-	if (accessAllowed(ctx, req)) return null;
-	return { success: false, error: new Error('Access denied') };
+	// Checked before the grant lookup so the user sees the actual reason.
+	if (req.write && isGlobalReadonly()) return { allowed: false, error: READONLY_MESSAGE };
+	if (!accessAllowed(ctx, req)) return { allowed: false, error: DENIED_MESSAGE };
+	return { allowed: true, ctx };
 }
 
-export async function requireAdmin(): Promise<{ success: false; error: Error } | null> {
+export async function requireAdmin(): Promise<GuardResult> {
 	const ctx = await getAccessContext();
-	if (ctx.mode === 'ACCOUNT' && ctx.account?.isAdmin) return null;
-	return { success: false, error: new Error('Administrator access required') };
+	if (ctx.mode === 'ACCOUNT' && ctx.account?.isAdmin) return { allowed: true, ctx };
+	return { allowed: false, error: ADMIN_MESSAGE };
+}
+
+// Instance-wide operations such as creating or dropping a database. Only ACCOUNT
+// mode knows the difference between administrators and regular users, so every
+// other mode grants this to whoever got through the front door.
+export function canAdministerInstance(ctx: AccessContext): boolean {
+	switch (ctx.mode) {
+		case 'NONE':
+			return true;
+		case 'ACCOUNT':
+			return !!ctx.account?.isAdmin;
+		default:
+			return ctx.authenticated;
+	}
+}
+
+export async function requireInstanceAdmin(): Promise<GuardResult> {
+	const ctx = await getAccessContext();
+	if (canAdministerInstance(ctx)) return { allowed: true, ctx };
+	return { allowed: false, error: ctx.mode === 'ACCOUNT' ? ADMIN_MESSAGE : DENIED_MESSAGE };
+}
+
+export async function requireAnyAccess(): Promise<GuardResult> {
+	const ctx = await getAccessContext();
+	if (!accessAllowed(ctx, {})) return { allowed: false, error: DENIED_MESSAGE };
+	if (ctx.mode === 'ACCOUNT' && ctx.account && !ctx.account.isAdmin) {
+		if (ctx.account.grants.length === 0) return { allowed: false, error: DENIED_MESSAGE };
+	}
+	return { allowed: true, ctx };
 }
 
 export interface ResourcePermissions {
@@ -128,10 +189,9 @@ export async function getResourcePermissions(
 	collection?: string,
 ): Promise<ResourcePermissions> {
 	const ctx = await getAccessContext();
-	const globalReadonly = envBool('MONGONAUT_READONLY', false);
 	return {
 		canRead: accessAllowed(ctx, { database, collection, write: false }),
-		canWrite: !globalReadonly && accessAllowed(ctx, { database, collection, write: true }),
+		canWrite: accessAllowed(ctx, { database, collection, write: true }),
 	};
 }
 
@@ -152,89 +212,58 @@ export function canWriteResource(
 	database: string,
 	collection?: string,
 ): boolean {
-	if (envBool('MONGONAUT_READONLY', false)) return false;
 	return accessAllowed(ctx, { database, collection, write: true });
 }
 
-interface AggregationTargets {
-	reads: string[];
-	writes: string[];
-}
-
-function collectAggregationTargets(pipeline: unknown[]): AggregationTargets {
-	const reads = new Set<string>();
-	const writes = new Set<string>();
-	const collName = (value: unknown): string | null => {
-		if (typeof value === 'string') return value;
-		if (value && typeof value === 'object') {
-			const coll = (value as { coll?: unknown }).coll ?? (value as { into?: unknown }).into;
-			if (typeof coll === 'string') return coll;
-		}
-		return null;
-	};
-
-	for (const stage of pipeline) {
-		if (!stage || typeof stage !== 'object') continue;
-		for (const [op, val] of Object.entries(stage as Record<string, unknown>)) {
-			switch (op) {
-				case '$lookup':
-				case '$graphLookup': {
-					const from = (val as { from?: unknown })?.from;
-					if (typeof from === 'string') reads.add(from);
-					break;
-				}
-				case '$unionWith': {
-					const name = collName(val);
-					if (name) reads.add(name);
-					break;
-				}
-				case '$out': {
-					const name = collName(val);
-					if (name) writes.add(name);
-					break;
-				}
-				case '$merge': {
-					const into = (val as { into?: unknown })?.into ?? val;
-					const name = collName(into);
-					if (name) writes.add(name);
-					break;
-				}
-			}
-		}
-	}
-	return { reads: [...reads], writes: [...writes] };
-}
+export type AggregationGuardResult =
+	{ allowed: true; ctx: AccessContext; hasWriteStage: boolean } | GuardFailure;
 
 export async function guardAggregation(
 	database: string,
 	collection: string,
-	pipeline: unknown[],
-): Promise<{ success: false; error: Error } | null> {
+	pipeline: Document[],
+): Promise<AggregationGuardResult> {
 	const ctx = await getAccessContext();
 
 	if (!accessAllowed(ctx, { database, collection, write: false })) {
-		return { success: false, error: new Error('Access denied') };
+		return { allowed: false, error: DENIED_MESSAGE };
 	}
 
-	const { reads, writes } = collectAggregationTargets(pipeline);
+	let analysis: PipelineAnalysis;
+	try {
+		analysis = analyzePipeline(pipeline);
+	} catch (error) {
+		return { allowed: false, error: error instanceof Error ? error.message : 'Invalid pipeline' };
+	}
 
-	for (const target of reads) {
-		if (!accessAllowed(ctx, { database, collection: target, write: false })) {
+	if (analysis.serverJs.length > 0 && !isServerJsAllowed()) {
+		return { allowed: false, error: serverJsMessage(analysis.serverJs) };
+	}
+
+	for (const target of analysis.reads) {
+		const targetDb = target.database ?? database;
+		if (!accessAllowed(ctx, { database: targetDb, collection: target.collection, write: false })) {
 			return {
-				success: false,
-				error: new Error(`Access denied: no read permission for "${target}"`),
+				allowed: false,
+				error: `Access denied: no read permission for "${targetDb}.${target.collection}"`,
 			};
 		}
 	}
 
-	for (const target of writes) {
-		if (!accessAllowed(ctx, { database, collection: target, write: true })) {
+	for (const target of analysis.writes) {
+		if (isGlobalReadonly()) return { allowed: false, error: READONLY_MESSAGE };
+		const targetDb = target.database ?? database;
+		if (!accessAllowed(ctx, { database: targetDb, collection: target.collection, write: true })) {
 			return {
-				success: false,
-				error: new Error(`Access denied: aggregation write to "${target}" not permitted`),
+				allowed: false,
+				error: `Access denied: aggregation write to "${targetDb}.${target.collection}" not permitted`,
 			};
 		}
 	}
 
-	return null;
+	return { allowed: true, ctx, hasWriteStage: hasWriteStage(analysis) };
+}
+
+export function serverJsMessage(operators: string[]): string {
+	return `${operators.join(', ')} executes JavaScript inside MongoDB and is disabled. Set MONGONAUT_ALLOW_SERVER_JS=true to allow it.`;
 }

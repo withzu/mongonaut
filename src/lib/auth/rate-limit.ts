@@ -13,20 +13,22 @@ interface RateLimitConfig {
 	lockoutMs: number;
 	globalMaxAttempts: number;
 	globalWindowMs: number;
+	trustedProxyHops: number;
 }
 
 let cachedConfig: RateLimitConfig | null = null;
 
 function getConfig(): RateLimitConfig {
 	if (cachedConfig) return cachedConfig;
-	const windowSeconds = envInt('MONGONAUT_LOGIN_WINDOW_SECONDS', 15 * 60);
-	const lockoutSeconds = envInt('MONGONAUT_LOGIN_LOCKOUT_SECONDS', 15 * 60);
+	const windowSeconds = envInt('MONGONAUT_LOGIN_WINDOW_SECONDS', 15 * 60, { min: 1 });
+	const lockoutSeconds = envInt('MONGONAUT_LOGIN_LOCKOUT_SECONDS', 15 * 60, { min: 1 });
 	cachedConfig = {
-		maxAttempts: envInt('MONGONAUT_LOGIN_MAX_ATTEMPTS', 5),
+		maxAttempts: envInt('MONGONAUT_LOGIN_MAX_ATTEMPTS', 5, { min: 1 }),
 		windowMs: windowSeconds * 1000,
 		lockoutMs: lockoutSeconds * 1000,
-		globalMaxAttempts: envInt('MONGONAUT_LOGIN_GLOBAL_MAX_ATTEMPTS', 50),
-		globalWindowMs: envInt('MONGONAUT_LOGIN_GLOBAL_WINDOW_SECONDS', 5 * 60) * 1000,
+		globalMaxAttempts: envInt('MONGONAUT_LOGIN_GLOBAL_MAX_ATTEMPTS', 50, { min: 1 }),
+		globalWindowMs: envInt('MONGONAUT_LOGIN_GLOBAL_WINDOW_SECONDS', 5 * 60, { min: 1 }) * 1000,
+		trustedProxyHops: envInt('MONGONAUT_TRUSTED_PROXY_HOPS', 0, { min: 0, max: 10 }),
 	};
 	return cachedConfig;
 }
@@ -123,15 +125,31 @@ export function recordLoginFailure(clientKey: string): void {
 
 export function recordLoginSuccess(clientKey: string): void {
 	buckets.delete(clientKey);
+	buckets.delete(GLOBAL_KEY);
 }
 
 export function getClientKey(req: NextRequest): string {
-	const xff = req.headers.get('x-forwarded-for');
-	if (xff) {
-		const first = xff.split(',')[0]?.trim();
-		if (first) return `ip:${first}`;
+	const hops = getConfig().trustedProxyHops;
+	if (hops <= 0) return 'ip:direct';
+
+	const forwarded = req.headers.get('x-forwarded-for');
+	if (forwarded) {
+		const chain = forwarded
+			.split(',')
+			.map(entry => entry.trim())
+			.filter(Boolean);
+		const index = chain.length - hops;
+		const candidate = chain[index >= 0 ? index : 0];
+		if (candidate) return `ip:${candidate}`;
 	}
+
 	const realIp = req.headers.get('x-real-ip');
-	if (realIp) return `ip:${realIp.trim()}`;
+	if (realIp?.trim()) return `ip:${realIp.trim()}`;
 	return 'ip:unknown';
+}
+
+export function retryAfterHeaders(decision: RateLimitDecision): Record<string, string> {
+	return decision.retryAfterSeconds > 0
+		? { 'Retry-After': String(decision.retryAfterSeconds) }
+		: {};
 }

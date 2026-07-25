@@ -11,6 +11,7 @@ import {
 	getClientKey,
 	recordLoginFailure,
 	recordLoginSuccess,
+	retryAfterHeaders,
 } from '@/lib/auth/rate-limit';
 import {
 	dummyVerify,
@@ -18,6 +19,8 @@ import {
 	verifyPassword,
 	verifyRecovery,
 } from '@/lib/auth/accounts';
+import { safeInternalPath } from '@/lib/auth/redirect';
+import { audit } from '@/lib/mongo/audit';
 
 export const runtime = 'nodejs';
 
@@ -29,13 +32,6 @@ function timingSafeEqualStrings(a: string, b: string): boolean {
 	let diff = 0;
 	for (let i = 0; i < aBytes.length; i++) diff |= aBytes[i] ^ bBytes[i];
 	return diff === 0;
-}
-
-function safeNext(value: string | null | undefined): string {
-	if (!value) return '/';
-	if (!value.startsWith('/')) return '/';
-	if (value.startsWith('//')) return '/';
-	return value;
 }
 
 interface Credentials {
@@ -64,15 +60,20 @@ async function readCredentials(req: NextRequest): Promise<Credentials> {
 	};
 }
 
+function tooManyAttempts(retryAfterSeconds: number) {
+	return NextResponse.json(
+		{ ok: false, error: 'Too many attempts. Please try again later.' },
+		{
+			status: 429,
+			headers: retryAfterHeaders({ allowed: false, retryAfterSeconds, remainingAttempts: 0 }),
+		},
+	);
+}
+
 function failureResponse(clientKey: string, message: string) {
 	recordLoginFailure(clientKey);
 	const after = checkLoginRateLimit(clientKey);
-	if (!after.allowed) {
-		return NextResponse.json(
-			{ ok: false, error: 'Too many attempts. Please try again later.' },
-			{ status: 429 },
-		);
-	}
+	if (!after.allowed) return tooManyAttempts(after.retryAfterSeconds);
 	return NextResponse.json({ ok: false, error: message }, { status: 401 });
 }
 
@@ -102,15 +103,10 @@ export async function POST(req: NextRequest) {
 
 	const clientKey = getClientKey(req);
 	const limit = checkLoginRateLimit(clientKey);
-	if (!limit.allowed) {
-		return NextResponse.json(
-			{ ok: false, error: 'Too many attempts. Please try again later.' },
-			{ status: 429 },
-		);
-	}
+	if (!limit.allowed) return tooManyAttempts(limit.retryAfterSeconds);
 
 	const creds = await readCredentials(req);
-	const next = safeNext(new URL(req.url).searchParams.get('next'));
+	const next = safeInternalPath(new URL(req.url).searchParams.get('next'));
 
 	if (cfg.mode === 'STATIC_PASSWORD') {
 		if (!cfg.staticPassword) {
@@ -120,9 +116,11 @@ export async function POST(req: NextRequest) {
 			);
 		}
 		if (!creds.password || !timingSafeEqualStrings(creds.password, cfg.staticPassword)) {
+			audit({ action: 'auth.login', actor: 'static-password', outcome: 'denied' });
 			return failureResponse(clientKey, 'Invalid password');
 		}
 		recordLoginSuccess(clientKey);
+		audit({ action: 'auth.login', actor: 'static-password', outcome: 'success' });
 		const { token } = await createSessionToken(
 			cfg.secret,
 			'STATIC_PASSWORD',
@@ -143,10 +141,22 @@ export async function POST(req: NextRequest) {
 	}
 
 	if (!account || account.disabled || (!valid && !recovery)) {
+		audit({
+			action: 'auth.login',
+			actor: `account:${creds.email ?? 'unknown'}`,
+			outcome: 'denied',
+			detail: account?.disabled ? 'account disabled' : 'invalid credentials',
+		});
 		return failureResponse(clientKey, 'Invalid email or password');
 	}
 
 	recordLoginSuccess(clientKey);
+	audit({
+		action: 'auth.login',
+		actor: `account:${account.email}`,
+		outcome: 'success',
+		detail: recovery ? 'recovery password' : undefined,
+	});
 	const { token } = await createSessionToken(
 		cfg.secret,
 		'ACCOUNT',

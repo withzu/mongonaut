@@ -1,423 +1,759 @@
 'use server';
 
-import { BSON, type Document, type Filter, type Sort } from 'mongodb';
+import { BSON, type Document, type Filter, type IndexSpecification, type Sort } from 'mongodb';
 
-const { EJSON } = BSON;
-import { getMongoController } from '@/lib/mongoController';
-import { Database, MongoDocument } from '@/lib/types/mongo';
-import { envBool } from '@/lib/env';
 import {
+	getMongoController,
+	validateCollectionName,
+	validateDatabaseName,
+	type IndexSummary,
+} from '@/lib/mongoController';
+import { Collection, Database } from '@/lib/types/mongo';
+import { clampInt, envBool, envInt } from '@/lib/env';
+import {
+	canAdministerInstance,
 	canReadCollection,
 	canReadDatabase,
 	canWriteResource,
+	describeActor,
 	getAccessContext,
 	guardAccess,
 	guardAggregation,
+	isGlobalReadonly,
 	isHiddenDb,
-	requireAdmin,
+	isServerJsAllowed,
+	requireAnyAccess,
+	requireInstanceAdmin,
+	serverJsMessage,
 } from '@/lib/auth/server';
 import { INTERNAL_DB } from '@/lib/auth/accounts';
+import { audit } from '@/lib/mongo/audit';
+import { findServerJsOperators } from '@/lib/mongo/pipeline';
+import {
+	parseDocumentId,
+	parseDocumentJsonArray,
+	parseDocumentJsonObject,
+	stringifyDocumentId,
+	stringifyDocumentJson,
+} from '@/lib/mongo/document-json';
+
+const { EJSON } = BSON;
 
 const mongo = getMongoController();
 
-function assertWritable(): { success: false; error: Error } | null {
-	if (envBool('MONGONAUT_READONLY', false)) {
-		return { success: false, error: new Error('Mongonaut is running in read-only mode') };
-	}
-	return null;
+const DEFAULT_PAGE_SIZE = 20;
+
+export type ActionResult<T = undefined> =
+	{ success: true; data: T } | { success: false; error: string };
+
+function failure(error: string): ActionResult<never> {
+	return { success: false, error };
 }
 
-export const getServerInfo = async () => {
-	const guard = await guardAccess({});
-	if (guard) return guard;
+function success<T>(data: T): ActionResult<T> {
+	return { success: true, data };
+}
+
+function maxPageSize(): number {
+	return envInt('MONGONAUT_MAX_PAGE_SIZE', 200, { min: 1, max: 1000 });
+}
+
+function exportLimit(): number {
+	return envInt('MONGONAUT_EXPORT_MAX_DOCUMENTS', 50_000, { min: 1 });
+}
+
+function importLimit(): number {
+	return envInt('MONGONAUT_IMPORT_MAX_DOCUMENTS', 10_000, { min: 1 });
+}
+
+function messageOf(error: unknown, fallback: string): string {
+	return error instanceof Error && error.message ? error.message : fallback;
+}
+
+async function mapLimited<T, R>(
+	items: T[],
+	limit: number,
+	task: (item: T) => Promise<R>,
+): Promise<R[]> {
+	const results: R[] = new Array(items.length);
+	let cursor = 0;
+	const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+		while (cursor < items.length) {
+			const index = cursor++;
+			results[index] = await task(items[index]);
+		}
+	});
+	await Promise.all(workers);
+	return results;
+}
+
+// ---------------------------------------------------------------------------
+// Instance information
+// ---------------------------------------------------------------------------
+
+export const getServerInfo = async (): Promise<ActionResult<Document>> => {
+	const guard = await requireAnyAccess();
+	if (!guard.allowed) return failure(guard.error);
 	return await mongo.getServerInfo();
 };
 
-export const getViewerInfo = async () => {
+export interface ViewerInfo {
+	isAccountAdmin: boolean;
+	canCreateDatabase: boolean;
+	globalReadonly: boolean;
+	mode: string;
+	authenticated: boolean;
+}
+
+export const getViewerInfo = async (): Promise<ViewerInfo> => {
 	const ctx = await getAccessContext();
 	const isAccountAdmin = ctx.mode === 'ACCOUNT' && !!ctx.account?.isAdmin;
+	const authenticated = ctx.mode === 'NONE' || ctx.authenticated;
 	return {
 		isAccountAdmin,
-		canCreateDatabase: ctx.mode === 'ACCOUNT' ? isAccountAdmin : true,
-		globalReadonly: envBool('MONGONAUT_READONLY', false),
+		canCreateDatabase: canAdministerInstance(ctx),
+		globalReadonly: isGlobalReadonly(),
 		mode: ctx.mode,
+		authenticated,
 	};
 };
 
-export const listDatabases = async () => {
+export const listDatabases = async (): Promise<
+	ActionResult<{ databases: { name: string; sizeOnDisk?: number }[]; totalSize: number }>
+> => {
+	const ctx = await getAccessContext();
 	const result = await mongo.listDatabases();
-	if (!result.success || !result.data) return result;
+	if (!result.success) return result;
 
-	const ctx = await getAccessContext();
-	const databases = (result.data.databases || []).filter(
-		(db: { name: string }) => !isHiddenDb(db.name) && canReadDatabase(ctx, db.name),
+	const databases = result.data.databases.filter(
+		db => !isHiddenDb(db.name) && canReadDatabase(ctx, db.name),
 	);
-	const totalSize = databases.reduce(
-		(sum: number, db: { sizeOnDisk?: number }) => sum + (db.sizeOnDisk || 0),
-		0,
-	);
-
-	return { ...result, data: { ...result.data, databases, totalSize } };
+	const totalSize = databases.reduce((sum, db) => sum + (db.sizeOnDisk || 0), 0);
+	return success({ databases, totalSize });
 };
 
-export const collectSidebarDatabaseInformation = async () => {
+export const collectSidebarDatabaseInformation = async (): Promise<ActionResult<Database[]>> => {
+	const ctx = await getAccessContext();
 	const databasesResult = await mongo.listDatabases();
-	if (!databasesResult.success) {
-		return { success: false, error: databasesResult.error };
-	}
+	if (!databasesResult.success) return databasesResult;
 
-	if (!databasesResult.data) {
-		return { success: false, error: new Error('No database data available') };
-	}
+	const statsEnabled = envBool('MONGONAUT_SIDEBAR_STATS', true);
+	const statsMaxCollections = envInt('MONGONAUT_SIDEBAR_STATS_MAX_COLLECTIONS', 100, { min: 0 });
 
-	const databasesList = databasesResult.data.databases || [];
-	const collectedDatabaseData: Database[] = [];
-	const ctx = await getAccessContext();
-
-	for (const database of databasesList) {
-		if (isHiddenDb(database.name) || !canReadDatabase(ctx, database.name)) {
-			continue;
-		}
-
-		try {
-			const collectionsResult = await mongo.getDatabaseCollections(database.name);
-			if (!collectionsResult.success || !collectionsResult.data) {
-				console.warn(`Could not get collections for database ${database.name}`);
-				continue;
-			}
-
-			const collections = (await collectionsResult.data.toArray()).filter(
-				col => col.name !== '__mongonaut_init' && canReadCollection(ctx, database.name, col.name),
-			);
-
-			const collectionsWithStats = await Promise.all(
-				collections.map(async col => {
-					const canWrite = canWriteResource(ctx, database.name, col.name);
-					try {
-						const statsResult = await mongo.getCollectionStats(database.name, col.name);
-						if (!statsResult.success || !statsResult.data) {
-							console.warn(`Could not get stats for collection ${col.name}`);
-							return {
-								name: col.name,
-								totalSize: 0,
-								documentCount: 0,
-								canWrite,
-							};
-						}
-
-						const stats = statsResult.data;
-						return {
-							name: col.name,
-							totalSize: stats.size || 0,
-							documentCount: stats.count || 0,
-							canWrite,
-						};
-					} catch (error) {
-						console.error(`Error getting stats for ${col.name}:`, error);
-						return {
-							name: col.name,
-							totalSize: 0,
-							documentCount: 0,
-						};
-					}
-				}),
-			);
-
-			collectedDatabaseData.push({
-				name: database.name,
-				collections: collectionsWithStats,
-				totalSize: database.sizeOnDisk || 0,
-				canWrite: canWriteResource(ctx, database.name),
-			});
-		} catch (error) {
-			console.error(`Error processing database ${database.name}:`, error);
-			continue;
-		}
-	}
-
-	return { success: true, data: collectedDatabaseData };
-};
-
-export const getDatabaseCollection = async (name: string) => {
-	const guard = await guardAccess({ database: name });
-	if (guard) return undefined;
-
-	const result = await mongo.getDatabaseCollections(name);
-	if (!result.data) return result.data;
-
-	const ctx = await getAccessContext();
-	const collections = (await result.data.toArray()).filter(
-		col => col.name !== '__mongonaut_init' && canReadCollection(ctx, name, col.name),
+	const visible = databasesResult.data.databases.filter(
+		database => !isHiddenDb(database.name) && canReadDatabase(ctx, database.name),
 	);
-	return collections;
-};
 
-export const getDatabaseCollectionStats = async (database: string, collection: string) => {
-	const guard = await guardAccess({ database, collection });
-	if (guard) return undefined;
-
-	const result = await mongo.getCollectionStats(database, collection);
-	return result.data;
-};
-
-export const isDatabaseCollectionExisting = async (database: string, collection: string) => {
-	const ctx = await getAccessContext();
-	if (!canReadCollection(ctx, database, collection)) return false;
-
-	const result = await mongo.isCollectionExisting(database, collection);
-	return result.exists;
-};
-
-export const getDatabaseCollectionContent = async (
-	database: string,
-	collection: string,
-	page: number = 1,
-	pageSize: number = 10,
-) => {
-	const guard = await guardAccess({ database, collection });
-	if (guard) return { documents: [], pagination: emptyPagination(pageSize) };
-
-	const result = await mongo.getCollectionContent(database, collection, page, pageSize);
-
-	return {
-		documents: result.documents,
-		pagination: result.pagination,
-	};
-};
-
-export const getDatabaseCollectionAllDocumentsJson = async (
-	database: string,
-	collection: string,
-) => {
-	const guard = await guardAccess({ database, collection });
-	if (guard) return { ...guard, json: '[]' };
-
-	const result = await mongo.getAllDocuments(database, collection);
-
-	return {
-		success: result.success,
-		json: result.documents ? JSON.stringify(result.documents, null, 2) : '[]',
-		error: result.error,
-	};
-};
-
-const emptyPagination = (pageSize: number) => ({
-	total: 0,
-	page: 1,
-	pageSize,
-	totalPages: 0,
-});
-
-export const findInCollection = async (
-	database: string,
-	collection: string,
-	filterJson: string,
-	sortJson: string,
-	page: number = 1,
-	pageSize: number = 10,
-) => {
-	const guard = await guardAccess({ database, collection });
-	if (guard) return { ...guard, documents: [], pagination: emptyPagination(pageSize) };
-
-	let filter: Filter<Document>;
-	let sort: Sort;
-	try {
-		filter = filterJson ? (EJSON.parse(filterJson, { relaxed: true }) as Filter<Document>) : {};
-		sort = sortJson ? (EJSON.parse(sortJson, { relaxed: true }) as Sort) : {};
-	} catch (error) {
-		return {
-			success: false,
-			documents: [],
-			pagination: emptyPagination(pageSize),
-			error: error instanceof Error ? error : new Error('Invalid query JSON'),
-		};
-	}
-
-	const result = await mongo.findInCollection(database, collection, filter, sort, page, pageSize);
-
-	return {
-		success: result.success,
-		documents: result.documents,
-		pagination: result.pagination,
-		error: result.error,
-	};
-};
-
-export const aggregateInCollection = async (
-	database: string,
-	collection: string,
-	pipelineJson: string,
-	page: number = 1,
-	pageSize: number = 10,
-) => {
-	let pipeline: Document[];
-	try {
-		const parsed = EJSON.parse(pipelineJson, { relaxed: true });
-		if (!Array.isArray(parsed)) {
-			throw new Error('Aggregation pipeline must be a JSON array');
+	const collected: Database[] = [];
+	for (const database of visible) {
+		const collectionsResult = await mongo.getDatabaseCollections(database.name);
+		if (!collectionsResult.success) {
+			console.warn(
+				`[mongonaut] could not list collections of "${database.name}": ${collectionsResult.error}`,
+			);
+			continue;
 		}
-		pipeline = parsed as Document[];
-	} catch (error) {
-		return {
-			success: false,
-			documents: [],
-			pagination: emptyPagination(pageSize),
-			error: error instanceof Error ? error : new Error('Invalid pipeline JSON'),
-		};
+
+		const collections = collectionsResult.data.filter(
+			entry =>
+				entry.name !== '__mongonaut_init' && canReadCollection(ctx, database.name, entry.name),
+		);
+
+		const withStats = statsEnabled && collections.length <= statsMaxCollections;
+
+		const entries: Collection[] = withStats
+			? await mapLimited(collections, 8, async entry => {
+					const stats = await mongo.getCollectionStats(database.name, entry.name);
+					return {
+						name: entry.name,
+						totalSize: stats.success ? stats.data.size : null,
+						documentCount: stats.success ? stats.data.count : null,
+						canWrite: canWriteResource(ctx, database.name, entry.name),
+					};
+				})
+			: collections.map(entry => ({
+					name: entry.name,
+					totalSize: null,
+					documentCount: null,
+					canWrite: canWriteResource(ctx, database.name, entry.name),
+				}));
+
+		collected.push({
+			name: database.name,
+			collections: entries,
+			totalSize: database.sizeOnDisk || 0,
+			canWrite: canWriteResource(ctx, database.name),
+		});
 	}
 
-	const guard = await guardAggregation(database, collection, pipeline);
-	if (guard) return { ...guard, documents: [], pagination: emptyPagination(pageSize) };
-
-	const result = await mongo.aggregateInCollection(database, collection, pipeline, page, pageSize);
-
-	return {
-		success: result.success,
-		documents: result.documents,
-		pagination: result.pagination,
-		error: result.error,
-	};
+	return success(collected);
 };
 
-export const deleteDocument = async (database: string, collection: string, documentId: string) => {
-	const guard = assertWritable();
-	if (guard) return { ...guard, deleted: false };
-	const access = await guardAccess({ database, collection, write: true });
-	if (access) return { ...access, deleted: false };
-
-	const result = await mongo.deleteDocument(database, collection, documentId);
-
-	return {
-		success: result.success,
-		deleted: result.deleted || false,
-		error: result.error,
-	};
+export const getCollectionStats = async (
+	database: string,
+	collection: string,
+): Promise<ActionResult<{ size: number; count: number; avgObjSize: number }>> => {
+	const guard = await guardAccess({ database, collection });
+	if (!guard.allowed) return failure(guard.error);
+	const result = await mongo.getCollectionStats(database, collection);
+	if (!result.success) return result;
+	return success({
+		size: result.data.size,
+		count: result.data.count,
+		avgObjSize: result.data.avgObjSize,
+	});
 };
 
-export const deleteAllDocuments = async (database: string, collection: string) => {
-	const guard = assertWritable();
-	if (guard) return { ...guard, deletedCount: 0 };
-	const access = await guardAccess({ database, collection, write: true });
-	if (access) return { ...access, deletedCount: 0 };
-
-	const result = await mongo.deleteAllDocuments(database, collection);
-
-	return {
-		success: result.success,
-		deletedCount: result.deletedCount || 0,
-		error: result.error,
-	};
+export const collectionExists = async (database: string, collection: string): Promise<boolean> => {
+	const guard = await guardAccess({ database, collection });
+	if (!guard.allowed) return false;
+	const result = await mongo.collectionExists(database, collection);
+	return result.success && result.data;
 };
 
-export const addDocument = async (database: string, collection: string, documentJson: string) => {
-	const guard = assertWritable();
-	if (guard) return { ...guard, insertedId: null };
-	const access = await guardAccess({ database, collection, write: true });
-	if (access) return { ...access, insertedId: null };
+// ---------------------------------------------------------------------------
+// Reading documents
+// ---------------------------------------------------------------------------
 
+export interface DocumentEnvelope {
+	json: string;
+	idJson: string | null;
+}
+
+export interface DocumentPage {
+	documents: DocumentEnvelope[];
+	page: number;
+	pageSize: number;
+	total: number | null;
+	totalPages: number | null;
+	hasMore: boolean;
+}
+
+export interface LoadDocumentsInput {
+	database: string;
+	collection: string;
+	mode?: 'browse' | 'find' | 'aggregate';
+	filter?: string;
+	sort?: string;
+	pipeline?: string;
+	page?: unknown;
+	pageSize?: unknown;
+}
+
+function envelope(document: Document): DocumentEnvelope {
+	return {
+		json: stringifyDocumentJson(document, 2),
+		idJson: '_id' in document ? stringifyDocumentId(document._id) : null,
+	};
+}
+
+export const loadDocuments = async (
+	input: LoadDocumentsInput,
+): Promise<ActionResult<DocumentPage>> => {
+	const { database, collection } = input;
+	const page = clampInt(input.page, 1, { min: 1, max: 1_000_000 });
+	const pageSize = clampInt(input.pageSize, DEFAULT_PAGE_SIZE, { min: 1, max: maxPageSize() });
+
+	const mode =
+		input.mode === 'aggregate' && input.pipeline
+			? 'aggregate'
+			: input.mode === 'find' || input.filter || input.sort
+				? 'find'
+				: 'browse';
+
+	if (mode === 'aggregate') {
+		let pipeline: Document[];
+		try {
+			const parsed = EJSON.parse(input.pipeline as string, { relaxed: false });
+			if (!Array.isArray(parsed)) throw new Error('Aggregation pipeline must be a JSON array');
+			pipeline = parsed as Document[];
+		} catch (error) {
+			return failure(messageOf(error, 'Invalid pipeline JSON'));
+		}
+
+		const guard = await guardAggregation(database, collection, pipeline);
+		if (!guard.allowed) return failure(guard.error);
+
+		const result = await mongo.aggregateDocuments(
+			database,
+			collection,
+			pipeline,
+			page,
+			pageSize,
+			guard.hasWriteStage,
+		);
+		if (!result.success) return result;
+		if (guard.hasWriteStage) {
+			audit({
+				action: 'collection.aggregate.write',
+				actor: describeActor(guard.ctx),
+				outcome: 'success',
+				database,
+				collection,
+			});
+		}
+		return success(toDocumentPage(result.data));
+	}
+
+	const guard = await guardAccess({ database, collection });
+	if (!guard.allowed) return failure(guard.error);
+
+	if (mode === 'find') {
+		let filter: Filter<Document>;
+		let sort: Sort;
+		try {
+			filter = input.filter
+				? (EJSON.parse(input.filter, { relaxed: false }) as Filter<Document>)
+				: {};
+			sort = input.sort ? (EJSON.parse(input.sort, { relaxed: false }) as Sort) : {};
+		} catch (error) {
+			return failure(messageOf(error, 'Invalid query JSON'));
+		}
+
+		if (!isServerJsAllowed()) {
+			const serverJs = findServerJsOperators([filter, sort]);
+			if (serverJs.length > 0) return failure(serverJsMessage(serverJs));
+		}
+
+		const result = await mongo.findDocuments(database, collection, filter, sort, page, pageSize);
+		if (!result.success) return result;
+		return success(toDocumentPage(result.data));
+	}
+
+	const result = await mongo.browseDocuments(database, collection, page, pageSize);
+	if (!result.success) return result;
+	return success(toDocumentPage(result.data));
+};
+
+function toDocumentPage(result: {
+	documents: Document[];
+	page: number;
+	pageSize: number;
+	total: number | null;
+	totalPages: number | null;
+	hasMore: boolean;
+}): DocumentPage {
+	return { ...result, documents: result.documents.map(envelope) };
+}
+
+export const exportCollection = async (
+	database: string,
+	collection: string,
+): Promise<ActionResult<{ json: string; count: number; truncated: boolean; limit: number }>> => {
+	const guard = await guardAccess({ database, collection });
+	if (!guard.allowed) return failure(guard.error);
+
+	const limit = exportLimit();
+	const result = await mongo.exportDocuments(database, collection, limit);
+	if (!result.success) return result;
+
+	audit({
+		action: 'collection.export',
+		actor: describeActor(guard.ctx),
+		outcome: 'success',
+		database,
+		collection,
+		count: result.data.documents.length,
+	});
+
+	return success({
+		// Extended JSON keeps the export re-importable without losing BSON types.
+		json: stringifyDocumentJson(result.data.documents, 2),
+		count: result.data.documents.length,
+		truncated: result.data.truncated,
+		limit,
+	});
+};
+
+// ---------------------------------------------------------------------------
+// Writing documents
+// ---------------------------------------------------------------------------
+
+export const addDocuments = async (
+	database: string,
+	collection: string,
+	documentJson: string,
+): Promise<ActionResult<{ insertedCount: number }>> => {
+	const guard = await guardAccess({ database, collection, write: true });
+	if (!guard.allowed) {
+		audit({
+			action: 'document.insert',
+			actor: describeActor(await getAccessContext()),
+			outcome: 'denied',
+			database,
+			collection,
+			detail: guard.error,
+		});
+		return failure(guard.error);
+	}
+
+	let documents: Document[];
 	try {
-		const document = JSON.parse(documentJson);
-		const result = await mongo.addDocument(database, collection, document);
-
-		return {
-			success: result.success,
-			insertedId: result.insertedId || null,
-			error: result.error,
-		};
+		documents = parseDocumentJsonArray(documentJson);
 	} catch (error) {
-		return {
-			success: false,
-			insertedId: null,
-			error: error instanceof Error ? error : new Error('Invalid JSON'),
-		};
+		return failure(messageOf(error, 'Invalid JSON'));
 	}
+	if (documents.length === 0) return failure('There is nothing to insert');
+	if (documents.length > importLimit()) {
+		return failure(`At most ${importLimit()} documents can be imported at once`);
+	}
+
+	const result = await mongo.insertDocuments(database, collection, documents);
+	audit({
+		action: 'document.insert',
+		actor: describeActor(guard.ctx),
+		outcome: result.success ? 'success' : 'error',
+		database,
+		collection,
+		count: result.success ? result.data.insertedCount : documents.length,
+		detail: result.success ? undefined : result.error,
+	});
+	if (!result.success) return result;
+	return success({ insertedCount: result.data.insertedCount });
 };
 
 export const updateDocument = async (
 	database: string,
 	collection: string,
-	documentId: string,
-	updatedDocument: MongoDocument,
-) => {
-	const guard = assertWritable();
-	if (guard) return { ...guard, updated: false };
-	const access = await guardAccess({ database, collection, write: true });
-	if (access) return { ...access, updated: false };
+	idJson: string,
+	documentJson: string,
+): Promise<ActionResult<{ modified: boolean }>> => {
+	const guard = await guardAccess({ database, collection, write: true });
+	if (!guard.allowed) return failure(guard.error);
 
-	const result = await mongo.updateDocument(database, collection, documentId, updatedDocument);
-
-	return {
-		success: result.success,
-		updated: result.updated || false,
-		error: result.error,
-	};
-};
-
-export const createCollection = async (database: string, collection: string) => {
-	const guard = assertWritable();
-	if (guard) return guard;
-	const access = await guardAccess({ database, write: true });
-	if (access) return access;
-
-	return await mongo.createCollection(database, collection);
-};
-
-export const createDatabase = async (database: string) => {
-	const guard = assertWritable();
-	if (guard) return guard;
-	const admin = await requireAdmin();
-	if (admin) return admin;
-	if (isHiddenDb(database) || database === INTERNAL_DB) {
-		return { success: false, error: new Error('Reserved database name') };
+	let documentId: unknown;
+	let replacement: Document;
+	try {
+		documentId = parseDocumentId(idJson);
+		replacement = parseDocumentJsonObject(documentJson);
+	} catch (error) {
+		return failure(messageOf(error, 'Invalid JSON'));
 	}
 
-	const dummyCollection = '__mongonaut_init';
-	return await mongo.createCollection(database, dummyCollection);
+	const result = await mongo.replaceDocument(database, collection, documentId, replacement);
+	audit({
+		action: 'document.update',
+		actor: describeActor(guard.ctx),
+		outcome: result.success ? 'success' : 'error',
+		database,
+		collection,
+		target: idJson,
+		detail: result.success ? undefined : result.error,
+	});
+	if (!result.success) return result;
+	if (result.data.matched === 0) return failure('The document no longer exists');
+	return success({ modified: result.data.modified > 0 });
 };
 
-export const dropCollection = async (database: string, collection: string) => {
-	const guard = assertWritable();
-	if (guard) return guard;
-	const access = await guardAccess({ database, collection, write: true });
-	if (access) return access;
+export const deleteDocument = async (
+	database: string,
+	collection: string,
+	idJson: string,
+): Promise<ActionResult<{ deleted: boolean }>> => {
+	const guard = await guardAccess({ database, collection, write: true });
+	if (!guard.allowed) return failure(guard.error);
 
-	return await mongo.dropCollection(database, collection);
+	let documentId: unknown;
+	try {
+		documentId = parseDocumentId(idJson);
+	} catch (error) {
+		return failure(messageOf(error, 'Invalid document id'));
+	}
+
+	const result = await mongo.deleteDocument(database, collection, documentId);
+	audit({
+		action: 'document.delete',
+		actor: describeActor(guard.ctx),
+		outcome: result.success ? 'success' : 'error',
+		database,
+		collection,
+		target: idJson,
+		detail: result.success ? undefined : result.error,
+	});
+	if (!result.success) return result;
+	if (result.data.deleted === 0) return failure('The document no longer exists');
+	return success({ deleted: true });
 };
 
-export const renameCollection = async (database: string, collection: string, newName: string) => {
-	const guard = assertWritable();
-	if (guard) return guard;
-	const access = await guardAccess({ database, collection, write: true });
-	if (access) return access;
-	const targetAccess = await guardAccess({ database, collection: newName, write: true });
-	if (targetAccess) return targetAccess;
+export const deleteAllDocuments = async (
+	database: string,
+	collection: string,
+): Promise<ActionResult<{ deletedCount: number }>> => {
+	const guard = await guardAccess({ database, collection, write: true });
+	if (!guard.allowed) return failure(guard.error);
 
-	return await mongo.renameCollection(database, collection, newName);
+	const result = await mongo.deleteAllDocuments(database, collection);
+	audit({
+		action: 'document.deleteAll',
+		actor: describeActor(guard.ctx),
+		outcome: result.success ? 'success' : 'error',
+		database,
+		collection,
+		count: result.success ? result.data.deletedCount : undefined,
+		detail: result.success ? undefined : result.error,
+	});
+	return result;
+};
+
+// ---------------------------------------------------------------------------
+// Collections and databases
+// ---------------------------------------------------------------------------
+
+export const createCollection = async (
+	database: string,
+	collection: string,
+): Promise<ActionResult> => {
+	const guard = await guardAccess({ database, write: true });
+	if (!guard.allowed) return failure(guard.error);
+
+	const invalid = validateCollectionName(collection);
+	if (invalid) return failure(invalid);
+
+	const existing = await mongo.collectionExists(database, collection);
+	if (existing.success && existing.data) {
+		return failure(`A collection named "${collection}" already exists`);
+	}
+
+	const result = await mongo.createCollection(database, collection);
+	audit({
+		action: 'collection.create',
+		actor: describeActor(guard.ctx),
+		outcome: result.success ? 'success' : 'error',
+		database,
+		collection,
+		detail: result.success ? undefined : result.error,
+	});
+	return result.success ? success(undefined) : result;
+};
+
+export const createDatabase = async (database: string): Promise<ActionResult> => {
+	if (isGlobalReadonly()) return failure('Mongonaut is running in read-only mode');
+	const guard = await requireInstanceAdmin();
+	if (!guard.allowed) return failure(guard.error);
+
+	const invalid = validateDatabaseName(database);
+	if (invalid) return failure(invalid);
+	if (isHiddenDb(database) || database === INTERNAL_DB) return failure('Reserved database name');
+
+	const result = await mongo.createCollection(database, '__mongonaut_init');
+	audit({
+		action: 'database.create',
+		actor: describeActor(guard.ctx),
+		outcome: result.success ? 'success' : 'error',
+		database,
+		detail: result.success ? undefined : result.error,
+	});
+	return result.success ? success(undefined) : result;
+};
+
+export const dropCollection = async (
+	database: string,
+	collection: string,
+): Promise<ActionResult> => {
+	const guard = await guardAccess({ database, collection, write: true });
+	if (!guard.allowed) {
+		audit({
+			action: 'collection.drop',
+			actor: describeActor(await getAccessContext()),
+			outcome: 'denied',
+			database,
+			collection,
+			detail: guard.error,
+		});
+		return failure(guard.error);
+	}
+
+	const result = await mongo.dropCollection(database, collection);
+	audit({
+		action: 'collection.drop',
+		actor: describeActor(guard.ctx),
+		outcome: result.success ? 'success' : 'error',
+		database,
+		collection,
+		detail: result.success ? undefined : result.error,
+	});
+	return result.success ? success(undefined) : result;
+};
+
+export const renameCollection = async (
+	database: string,
+	collection: string,
+	newName: string,
+): Promise<ActionResult> => {
+	const guard = await guardAccess({ database, collection, write: true });
+	if (!guard.allowed) return failure(guard.error);
+	const targetGuard = await guardAccess({ database, collection: newName, write: true });
+	if (!targetGuard.allowed) return failure(targetGuard.error);
+
+	const invalid = validateCollectionName(newName);
+	if (invalid) return failure(invalid);
+
+	const existing = await mongo.collectionExists(database, newName);
+	if (existing.success && existing.data) {
+		return failure(`A collection named "${newName}" already exists`);
+	}
+
+	const result = await mongo.renameCollection(database, collection, newName);
+	audit({
+		action: 'collection.rename',
+		actor: describeActor(guard.ctx),
+		outcome: result.success ? 'success' : 'error',
+		database,
+		collection,
+		target: newName,
+		detail: result.success ? undefined : result.error,
+	});
+	return result.success ? success(undefined) : result;
 };
 
 export const duplicateCollection = async (
 	database: string,
 	collection: string,
 	targetName: string,
-) => {
-	const guard = assertWritable();
-	if (guard) return guard;
-	const readAccess = await guardAccess({ database, collection });
-	if (readAccess) return readAccess;
-	const writeAccess = await guardAccess({ database, collection: targetName, write: true });
-	if (writeAccess) return writeAccess;
+): Promise<ActionResult> => {
+	const readGuard = await guardAccess({ database, collection });
+	if (!readGuard.allowed) return failure(readGuard.error);
+	const writeGuard = await guardAccess({ database, collection: targetName, write: true });
+	if (!writeGuard.allowed) return failure(writeGuard.error);
 
-	return await mongo.duplicateCollection(database, collection, targetName);
-};
+	const invalid = validateCollectionName(targetName);
+	if (invalid) return failure(invalid);
+	if (targetName === collection) return failure('Please choose a different target name');
 
-export const dropDatabase = async (database: string) => {
-	const guard = assertWritable();
-	if (guard) return guard;
-	const admin = await requireAdmin();
-	if (admin) return admin;
-	if (isHiddenDb(database)) {
-		return { success: false, error: new Error('Reserved database name') };
+	// $out replaces an existing collection, so an occupied target would be
+	// destroyed silently.
+	const existing = await mongo.collectionExists(database, targetName);
+	if (!existing.success) return existing;
+	if (existing.data) {
+		return failure(
+			`A collection named "${targetName}" already exists. Duplicating would overwrite it.`,
+		);
 	}
 
-	return await mongo.dropDatabase(database);
+	const result = await mongo.duplicateCollection(database, collection, targetName);
+	audit({
+		action: 'collection.duplicate',
+		actor: describeActor(writeGuard.ctx),
+		outcome: result.success ? 'success' : 'error',
+		database,
+		collection,
+		target: targetName,
+		detail: result.success ? undefined : result.error,
+	});
+	return result.success ? success(undefined) : result;
+};
+
+export const dropDatabase = async (database: string): Promise<ActionResult> => {
+	if (isGlobalReadonly()) return failure('Mongonaut is running in read-only mode');
+	const guard = await requireInstanceAdmin();
+	if (!guard.allowed) {
+		audit({
+			action: 'database.drop',
+			actor: describeActor(await getAccessContext()),
+			outcome: 'denied',
+			database,
+			detail: guard.error,
+		});
+		return failure(guard.error);
+	}
+	if (isHiddenDb(database)) return failure('Reserved database name');
+
+	const result = await mongo.dropDatabase(database);
+	audit({
+		action: 'database.drop',
+		actor: describeActor(guard.ctx),
+		outcome: result.success ? 'success' : 'error',
+		database,
+		detail: result.success ? undefined : result.error,
+	});
+	return result.success ? success(undefined) : result;
+};
+
+// ---------------------------------------------------------------------------
+// Indexes
+// ---------------------------------------------------------------------------
+
+export const listIndexes = async (
+	database: string,
+	collection: string,
+): Promise<ActionResult<IndexSummary[]>> => {
+	const guard = await guardAccess({ database, collection });
+	if (!guard.allowed) return failure(guard.error);
+	return await mongo.listIndexes(database, collection);
+};
+
+export interface CreateIndexInput {
+	keysJson: string;
+	name?: string;
+	unique?: boolean;
+	sparse?: boolean;
+	ttlSeconds?: number;
+}
+
+export const createIndex = async (
+	database: string,
+	collection: string,
+	input: CreateIndexInput,
+): Promise<ActionResult<{ name: string }>> => {
+	const guard = await guardAccess({ database, collection, write: true });
+	if (!guard.allowed) return failure(guard.error);
+
+	let keys: IndexSpecification;
+	try {
+		const parsed = JSON.parse(input.keysJson) as unknown;
+		if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+			throw new Error('Index keys must be a JSON object, for example { "email": 1 }');
+		}
+		if (Object.keys(parsed).length === 0) throw new Error('Please specify at least one field');
+		keys = parsed as IndexSpecification;
+	} catch (error) {
+		return failure(messageOf(error, 'Invalid index definition'));
+	}
+
+	const ttlSeconds =
+		typeof input.ttlSeconds === 'number' &&
+		Number.isFinite(input.ttlSeconds) &&
+		input.ttlSeconds >= 0
+			? Math.trunc(input.ttlSeconds)
+			: undefined;
+
+	const result = await mongo.createIndex(database, collection, keys, {
+		name: input.name?.trim() || undefined,
+		unique: !!input.unique,
+		sparse: !!input.sparse,
+		...(ttlSeconds !== undefined ? { expireAfterSeconds: ttlSeconds } : {}),
+	});
+	audit({
+		action: 'index.create',
+		actor: describeActor(guard.ctx),
+		outcome: result.success ? 'success' : 'error',
+		database,
+		collection,
+		target: result.success ? result.data : input.keysJson,
+		detail: result.success ? undefined : result.error,
+	});
+	if (!result.success) return result;
+	return success({ name: result.data });
+};
+
+export const dropIndex = async (
+	database: string,
+	collection: string,
+	indexName: string,
+): Promise<ActionResult> => {
+	const guard = await guardAccess({ database, collection, write: true });
+	if (!guard.allowed) return failure(guard.error);
+	if (indexName === '_id_') return failure('The _id index cannot be dropped');
+
+	const result = await mongo.dropIndex(database, collection, indexName);
+	audit({
+		action: 'index.drop',
+		actor: describeActor(guard.ctx),
+		outcome: result.success ? 'success' : 'error',
+		database,
+		collection,
+		target: indexName,
+		detail: result.success ? undefined : result.error,
+	});
+	return result.success ? success(undefined) : result;
 };

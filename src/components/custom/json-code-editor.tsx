@@ -5,7 +5,7 @@ import { json } from '@codemirror/lang-json';
 import { vscodeDark, vscodeLight } from '@uiw/codemirror-theme-vscode';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { usePreferredTheme } from '@/lib/utils';
+import { usePreferredTheme } from '@/hooks/use-preferred-theme';
 
 export function isValidJson(value: string): boolean {
 	try {
@@ -21,9 +21,9 @@ export function JsonValidityBadge({ valid }: { valid: boolean }) {
 		return (
 			<Badge
 				variant="outline"
-				className="bg-green-500/10 text-green-500 flex items-center gap-1 px-3 py-1"
+				className="bg-green-500/10 text-green-800 dark:text-green-400 flex items-center gap-1 px-3 py-1"
 			>
-				<CheckCircle2 size={14} />
+				<CheckCircle2 size={14} aria-hidden="true" />
 				<span>Valid JSON</span>
 			</Badge>
 		);

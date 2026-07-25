@@ -1,9 +1,10 @@
 'use server';
 
-import { requireAdmin } from '@/lib/auth/server';
+import { describeActor, requireAdmin } from '@/lib/auth/server';
 import {
 	createAccount,
 	deleteAccount,
+	DuplicateEmailError,
 	LastAdminError,
 	listAccounts,
 	setAccountPassword,
@@ -12,14 +13,16 @@ import {
 	type Grant,
 	type PublicAccount,
 } from '@/lib/auth/accounts';
+import { audit } from '@/lib/mongo/audit';
+import { validatePassword } from '@/lib/auth/policy';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LENGTH = 8;
 
 type AdminResult<T = undefined> = { success: true; data?: T } | { success: false; error: string };
 
 function errorMessage(error: unknown): string {
 	if (error instanceof LastAdminError) return error.message;
+	if (error instanceof DuplicateEmailError) return error.message;
 	if (error instanceof Error) return error.message;
 	return 'An unknown error occurred';
 }
@@ -41,7 +44,7 @@ function validateGrants(grants: unknown): Grant[] {
 
 export async function listAccountsAction(): Promise<AdminResult<PublicAccount[]>> {
 	const guard = await requireAdmin();
-	if (guard) return { success: false, error: guard.error.message };
+	if (!guard.allowed) return { success: false, error: guard.error };
 	const accounts = await listAccounts();
 	return { success: true, data: accounts.map(toPublicAccount) };
 }
@@ -58,15 +61,14 @@ export async function createAccountAction(
 	input: CreateAccountActionInput,
 ): Promise<AdminResult<PublicAccount>> {
 	const guard = await requireAdmin();
-	if (guard) return { success: false, error: guard.error.message };
+	if (!guard.allowed) return { success: false, error: guard.error };
 
 	const email = input.email?.trim() ?? '';
 	if (!EMAIL_PATTERN.test(email)) {
 		return { success: false, error: 'Please provide a valid email address' };
 	}
-	if (!input.password || input.password.length < MIN_PASSWORD_LENGTH) {
-		return { success: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` };
-	}
+	const passwordError = validatePassword(input.password);
+	if (passwordError) return { success: false, error: passwordError };
 
 	try {
 		const account = await createAccount({
@@ -76,14 +78,20 @@ export async function createAccountAction(
 			isAdmin: !!input.isAdmin,
 			grants: validateGrants(input.grants),
 		});
+		audit({
+			action: 'account.create',
+			actor: describeActor(guard.ctx),
+			outcome: 'success',
+			target: account.email,
+		});
 		return { success: true, data: toPublicAccount(account) };
 	} catch (error) {
-		// Duplicate email surfaces as a unique-index violation.
 		return { success: false, error: errorMessage(error) };
 	}
 }
 
 export interface UpdateAccountActionInput {
+	email?: string;
 	name?: string;
 	isAdmin?: boolean;
 	disabled?: boolean;
@@ -95,14 +103,25 @@ export async function updateAccountAction(
 	patch: UpdateAccountActionInput,
 ): Promise<AdminResult> {
 	const guard = await requireAdmin();
-	if (guard) return { success: false, error: guard.error.message };
+	if (!guard.allowed) return { success: false, error: guard.error };
+
+	if (patch.email !== undefined && !EMAIL_PATTERN.test(patch.email.trim())) {
+		return { success: false, error: 'Please provide a valid email address' };
+	}
 
 	try {
 		await updateAccount(id, {
+			email: patch.email?.trim(),
 			name: patch.name,
 			isAdmin: patch.isAdmin,
 			disabled: patch.disabled,
 			grants: patch.grants !== undefined ? validateGrants(patch.grants) : undefined,
+		});
+		audit({
+			action: 'account.update',
+			actor: describeActor(guard.ctx),
+			outcome: 'success',
+			target: patch.email?.trim() || id,
 		});
 		return { success: true };
 	} catch (error) {
@@ -112,12 +131,17 @@ export async function updateAccountAction(
 
 export async function setAccountPasswordAction(id: string, password: string): Promise<AdminResult> {
 	const guard = await requireAdmin();
-	if (guard) return { success: false, error: guard.error.message };
-	if (!password || password.length < MIN_PASSWORD_LENGTH) {
-		return { success: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` };
-	}
+	if (!guard.allowed) return { success: false, error: guard.error };
+	const passwordError = validatePassword(password);
+	if (passwordError) return { success: false, error: passwordError };
 	try {
 		await setAccountPassword(id, password);
+		audit({
+			action: 'account.resetPassword',
+			actor: describeActor(guard.ctx),
+			outcome: 'success',
+			target: id,
+		});
 		return { success: true };
 	} catch (error) {
 		return { success: false, error: errorMessage(error) };
@@ -126,9 +150,19 @@ export async function setAccountPasswordAction(id: string, password: string): Pr
 
 export async function deleteAccountAction(id: string): Promise<AdminResult> {
 	const guard = await requireAdmin();
-	if (guard) return { success: false, error: guard.error.message };
+	if (!guard.allowed) return { success: false, error: guard.error };
+	// An administrator must not remove their own access by accident.
+	if (guard.ctx.account?._id.toString() === id) {
+		return { success: false, error: 'You cannot delete your own account' };
+	}
 	try {
 		await deleteAccount(id);
+		audit({
+			action: 'account.delete',
+			actor: describeActor(guard.ctx),
+			outcome: 'success',
+			target: id,
+		});
 		return { success: true };
 	} catch (error) {
 		return { success: false, error: errorMessage(error) };

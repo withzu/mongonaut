@@ -4,30 +4,24 @@ import { getAuthConfig, getPublicAuthInfo } from '@/lib/auth/config';
 import { readSessionToken, SESSION_COOKIE } from '@/lib/auth/session';
 import { countAccounts } from '@/lib/auth/accounts';
 import { LoginCard } from '@/app/login/login-card';
+import { safeInternalPath } from '@/lib/auth/redirect';
+
+export const dynamic = 'force-dynamic';
 
 interface LoginPageProps {
 	searchParams: Promise<{ next?: string; error?: string }>;
-}
-
-function safeNext(value: string | undefined): string {
-	if (!value) return '/';
-	if (!value.startsWith('/')) return '/';
-	if (value.startsWith('//')) return '/';
-	if (value.startsWith('/login')) return '/';
-	return value;
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
 	const cfg = getAuthConfig();
 	const info = getPublicAuthInfo();
 	const params = await searchParams;
-	const next = safeNext(params.next);
+	const next = safeInternalPath(params.next);
 
 	if (cfg.mode === 'NONE') {
 		redirect(next);
 	}
 
-	// In ACCOUNT mode with no accounts yet, send the operator to the one-time setup.
 	if (cfg.mode === 'ACCOUNT' && cfg.secret && (await countAccounts()) === 0) {
 		redirect('/setup');
 	}

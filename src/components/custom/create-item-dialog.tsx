@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { toast } from 'sonner';
 import {
 	Dialog,
@@ -42,47 +42,51 @@ export function CreateItemDialog({
 	initialDb = '',
 }: CreateItemDialogProps) {
 	const { reloadData } = useDatabaseFetcher();
+	const dbNameId = useId();
+	const selectDbId = useId();
+	const collectionNameId = useId();
+
 	const [selectedItemType, setSelectedItemType] = useState<ItemType>(initialItemType);
 	const [dbName, setDbName] = useState('');
 	const [collectionName, setCollectionName] = useState('');
 	const [selectedDb, setSelectedDb] = useState(initialDb);
 	const [isCreating, setIsCreating] = useState(false);
 
+	const writableDatabases = databases.filter(database => database.canWrite);
 	const itemType: ItemType = databases.length === 0 ? 'database' : selectedItemType;
 
 	const handleCreate = async () => {
 		setIsCreating(true);
 		try {
 			if (itemType === 'database') {
-				if (!dbName) {
+				if (!dbName.trim()) {
 					toast.error('Please enter a database name.');
 					return;
 				}
-				const result = await createDatabase(dbName);
+				const result = await createDatabase(dbName.trim());
 				if (result.success) {
-					toast.success(`Database "${dbName}" created successfully!`);
+					toast.success(`Database "${dbName.trim()}" created`);
 					await reloadData();
 					onOpenChange(false);
 				} else {
-					toast.error(String(result.error) || 'Failed to create database');
+					toast.error(result.error);
 				}
 			} else {
-				if (!selectedDb || !collectionName) {
+				if (!selectedDb || !collectionName.trim()) {
 					toast.error('Please select a database and enter a collection name.');
 					return;
 				}
-				const result = await createCollection(selectedDb, collectionName);
+				const result = await createCollection(selectedDb, collectionName.trim());
 				if (result.success) {
-					toast.success(`Collection "${collectionName}" in "${selectedDb}" created successfully!`);
+					toast.success(`Collection "${collectionName.trim()}" created in "${selectedDb}"`);
 					await reloadData();
 					onOpenChange(false);
 				} else {
-					toast.error(String(result.error) || 'Failed to create collection');
+					toast.error(result.error);
 				}
 			}
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-			toast.error(`Error: ${errorMessage}`);
+			toast.error(error instanceof Error ? error.message : 'An unknown error occurred');
 		} finally {
 			setIsCreating(false);
 		}
@@ -91,13 +95,13 @@ export function CreateItemDialog({
 	return (
 		<Dialog
 			open={open}
-			onOpenChange={open => {
-				if (!open) {
+			onOpenChange={next => {
+				if (!next) {
 					setDbName('');
 					setCollectionName('');
-					setSelectedDb('');
+					setSelectedDb(initialDb);
 				}
-				onOpenChange(open);
+				onOpenChange(next);
 			}}
 		>
 			<DialogContent>
@@ -123,11 +127,11 @@ export function CreateItemDialog({
 						<div className="mt-4 space-y-4">
 							<TabsContent value="database">
 								<div className="space-y-2">
-									<label htmlFor="dbName" className="text-sm font-medium">
+									<label htmlFor={dbNameId} className="text-sm font-medium">
 										Database Name
 									</label>
 									<Input
-										id="dbName"
+										id={dbNameId}
 										value={dbName}
 										onChange={e => setDbName(e.target.value)}
 										placeholder="e.g. my_new_database"
@@ -137,28 +141,33 @@ export function CreateItemDialog({
 							<TabsContent value="collection">
 								<div className="space-y-4">
 									<div className="space-y-2">
-										<label htmlFor="selectDb" className="text-sm font-medium">
+										<label htmlFor={selectDbId} className="text-sm font-medium">
 											Select Database
 										</label>
 										<Select value={selectedDb} onValueChange={setSelectedDb}>
-											<SelectTrigger id="selectDb" className="w-full">
+											<SelectTrigger id={selectDbId} className="w-full">
 												<SelectValue placeholder="Choose a database" />
 											</SelectTrigger>
 											<SelectContent className="w-full">
-												{databases.map(db => (
+												{writableDatabases.map(db => (
 													<SelectItem key={db.name} value={db.name}>
 														{db.name}
 													</SelectItem>
 												))}
 											</SelectContent>
 										</Select>
+										{writableDatabases.length === 0 && (
+											<p className="text-muted-foreground text-xs">
+												No database allows writes with your current permissions.
+											</p>
+										)}
 									</div>
 									<div className="space-y-2">
-										<label htmlFor="collectionName" className="text-sm font-medium">
+										<label htmlFor={collectionNameId} className="text-sm font-medium">
 											Collection Name
 										</label>
 										<Input
-											id="collectionName"
+											id={collectionNameId}
 											value={collectionName}
 											onChange={e => setCollectionName(e.target.value)}
 											placeholder="e.g. users"
@@ -170,11 +179,11 @@ export function CreateItemDialog({
 					</Tabs>
 				) : (
 					<div className="space-y-2 mt-4">
-						<label htmlFor="dbName" className="text-sm font-medium">
+						<label htmlFor={dbNameId} className="text-sm font-medium">
 							Database Name
 						</label>
 						<Input
-							id="dbName"
+							id={dbNameId}
 							value={dbName}
 							onChange={e => setDbName(e.target.value)}
 							placeholder="e.g. my_new_database"

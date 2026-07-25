@@ -10,7 +10,7 @@ import {
 	TrashIcon,
 	XIcon,
 } from 'lucide-react';
-import { usePreferredTheme } from '@/lib/utils';
+import { usePreferredTheme } from '@/hooks/use-preferred-theme';
 
 export function ClientJsonEditor(props: JsonEditorProps) {
 	const theme = usePreferredTheme();

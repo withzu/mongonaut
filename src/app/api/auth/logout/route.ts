@@ -9,14 +9,14 @@ function clearAuthCookies(res: NextResponse) {
 	res.cookies.set(REDIRECT_COOKIE, '', { path: '/', maxAge: 0 });
 }
 
+/**
+ * POST only. A GET logout could be triggered from any third party page, for
+ * example through an image tag, and would sign the user out unasked.
+ */
 export async function POST(req: NextRequest) {
 	const url = new URL(req.url);
 	const target = new URL('/login', url);
 	const res = NextResponse.redirect(target, { status: 303 });
 	clearAuthCookies(res);
 	return res;
-}
-
-export async function GET(req: NextRequest) {
-	return POST(req);
 }
