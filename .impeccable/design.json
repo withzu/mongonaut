@@ -383,7 +383,11 @@
 			}
 		],
 		"dimensions": [
-			{ "name": "sidebar-width", "value": "16rem", "purpose": "Desktop rail." },
+			{
+				"name": "sidebar-width",
+				"value": "350px",
+				"purpose": "Desktop rail. Set by the app shell as --sidebar-width, overriding the sidebar component's own 16rem default."
+			},
 			{ "name": "sidebar-width-mobile", "value": "18rem", "purpose": "Mobile sheet." },
 			{ "name": "sidebar-width-icon", "value": "3rem", "purpose": "Icon-collapsed rail." },
 			{

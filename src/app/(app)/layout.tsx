@@ -1,13 +1,50 @@
 import React from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
-import { DatabaseFetcher } from '@/components/custom/database-fetcher';
+import { DatabaseFetcher, type ShellData } from '@/components/custom/database-fetcher';
 import { RecoveryGate } from '@/components/custom/recovery-gate';
+import {
+	collectSidebarDatabaseInformation,
+	getServerInfo,
+	getViewerInfo,
+	listDatabases,
+} from '@/actions/databaseOperation';
 
 interface AppLayoutProps {
 	children: React.ReactNode;
 }
 
+export const dynamic = 'force-dynamic';
+
+async function loadShellData(): Promise<ShellData> {
+	try {
+		const [databasesResult, dbListResult, serverInfoResult, viewer] = await Promise.all([
+			collectSidebarDatabaseInformation(),
+			listDatabases(),
+			getServerInfo(),
+			getViewerInfo(),
+		]);
+
+		if (!databasesResult.success) {
+			return { databases: [], viewer, error: databasesResult.error };
+		}
+
+		return {
+			databases: databasesResult.data,
+			totalSize: dbListResult.success ? dbListResult.data.totalSize : undefined,
+			serverInfo: serverInfoResult.success ? serverInfoResult.data : undefined,
+			viewer,
+		};
+	} catch (error) {
+		return {
+			databases: [],
+			error: error instanceof Error ? error.message : 'Unknown error',
+		};
+	}
+}
+
 export default async function AppLayout({ children }: Readonly<AppLayoutProps>) {
+	const initial = await loadShellData();
+
 	return (
 		<SidebarProvider
 			className="bg-sidebar"
@@ -23,7 +60,7 @@ export default async function AppLayout({ children }: Readonly<AppLayoutProps>) 
 			>
 				Skip to content
 			</a>
-			<DatabaseFetcher>{children}</DatabaseFetcher>
+			<DatabaseFetcher initial={initial}>{children}</DatabaseFetcher>
 			<RecoveryGate />
 		</SidebarProvider>
 	);

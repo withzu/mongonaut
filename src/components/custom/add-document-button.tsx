@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { PlusIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DocumentEditorDialog } from '@/components/custom/document-editor-dialog';
+import { preloadJsonEditor } from '@/components/custom/lazy-json-editor';
 
 const EMPTY_DOCUMENT = '{\n  \n}';
 
@@ -18,7 +19,12 @@ export function AddDocumentButton({
 
 	return (
 		<>
-			<Button onClick={() => setOpen(true)} className="flex items-center gap-2 self-start">
+			<Button
+				onClick={() => setOpen(true)}
+				onPointerEnter={preloadJsonEditor}
+				onFocus={preloadJsonEditor}
+				className="flex items-center gap-2 self-start"
+			>
 				<PlusIcon size={16} />
 				<span>Add documents</span>
 			</Button>

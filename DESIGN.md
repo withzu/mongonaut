@@ -250,7 +250,7 @@ A warm neutral field of five paper and ink tones, interrupted only by amber, wit
 
 A fixed left rail plus one flexible content column, with a single breakpoint.
 
-The sidebar is `16rem` wide on desktop, expands to an `18rem` sheet on mobile, and collapses to `3rem` in icon mode. It is `offcanvas`-collapsible, so on desktop it slides fully out rather than shrinking to icons, and transitions run at `200ms ease-linear` on width and position only.
+The sidebar is `350px` wide on desktop, set by the app shell as `--sidebar-width` and overriding the sidebar component's own `16rem` default. It expands to an `18rem` sheet on mobile and collapses to `3rem` in icon mode. It is `offcanvas`-collapsible, so on desktop it slides fully out rather than shrinking to icons, and transitions run at `200ms ease-linear` on width and position only.
 
 The content column is a single flex column with `1rem` gaps, padded `0.5rem` below 768px and `1.5rem` above it. Below 768px it also carries `7rem` of top margin to clear the fixed mobile header, which is two stacked bars: a `3.5rem` chrome row with the trigger, wordmark and read-only pill, and a `3rem` breadcrumb row beneath it. Both use `backdrop-filter: blur(4px)` over the page ground at 80% alpha, which is the only sanctioned blur in the working interface.
 

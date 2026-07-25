@@ -1,11 +1,8 @@
 'use client';
 
-import CodeMirror from '@uiw/react-codemirror';
-import { json } from '@codemirror/lang-json';
-import { vscodeDark, vscodeLight } from '@uiw/codemirror-theme-vscode';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { usePreferredTheme } from '@/hooks/use-preferred-theme';
+import { LazyJsonEditor } from '@/components/custom/lazy-json-editor';
 
 export function isValidJson(value: string): boolean {
 	try {
@@ -47,15 +44,11 @@ interface JsonCodeEditorProps {
 }
 
 export function JsonCodeEditor({ value, onChange, height = '500px' }: JsonCodeEditorProps) {
-	const theme = usePreferredTheme();
-
 	return (
-		<CodeMirror
+		<LazyJsonEditor
 			value={value}
 			height={height}
-			extensions={[json()]}
 			onChange={onChange}
-			theme={theme === 'dark' ? vscodeDark : vscodeLight}
 			basicSetup={{
 				lineNumbers: true,
 				highlightActiveLine: true,

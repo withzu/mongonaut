@@ -8,6 +8,7 @@ import { JsonEditorProps as LibJsonEditorProps } from 'json-edit-react';
 import { Button } from '@/components/ui/button';
 import { ClientJsonEditor } from '@/components/custom/client-json-editor';
 import { DocumentEditorDialog } from '@/components/custom/document-editor-dialog';
+import { preloadJsonEditor } from '@/components/custom/lazy-json-editor';
 import { deleteDocument } from '@/actions/databaseOperation';
 import {
 	AlertDialog,
@@ -77,13 +78,15 @@ export function DocumentView({
 	};
 
 	return (
-		<div className="border rounded-lg overflow-hidden w-full">
+		<div className="border rounded-lg overflow-hidden w-full [content-visibility:auto] [contain-intrinsic-size:auto_320px]">
 			{isEditable && (
 				<div className="flex items-center justify-end gap-1 border-b bg-muted/30 px-2 py-1">
 					<Button
 						variant="ghost"
 						size="sm"
 						onClick={() => setShowEditor(true)}
+						onPointerEnter={preloadJsonEditor}
+						onFocus={preloadJsonEditor}
 						className="text-muted-foreground hover:text-primary cursor-pointer h-7 gap-1.5"
 					>
 						<PencilIcon size={14} />

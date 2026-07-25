@@ -4,18 +4,11 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { InfoIcon, KeyRoundIcon, LogOutIcon, MoonIcon, SettingsIcon, SunIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import type { AuthMode } from '@/lib/auth/config';
 import { Button } from '@/components/ui/button';
 import { ChangePasswordDialog } from '@/components/custom/change-password-dialog';
 import { usePreferredTheme } from '@/hooks/use-preferred-theme';
+import { fetchAuthMe, type AuthMeResponse } from '@/lib/auth/me-client';
 import { cn } from '@/lib/utils';
-
-interface AuthMeResponse {
-	mode: AuthMode;
-	enabled: boolean;
-	authenticated: boolean;
-	user: { subject: string; mode: AuthMode; email: string | null; name: string | null } | null;
-}
 
 export function ThemeToggle({ className }: { className?: string }) {
 	const { setTheme } = useTheme();
@@ -82,14 +75,9 @@ export function SidebarFooterActions({
 
 	useEffect(() => {
 		let cancelled = false;
-		fetch('/api/auth/me', { cache: 'no-store' })
-			.then(r => (r.ok ? (r.json() as Promise<AuthMeResponse>) : null))
-			.then(data => {
-				if (!cancelled) setAuth(data);
-			})
-			.catch(() => {
-				if (!cancelled) setAuth(null);
-			});
+		void fetchAuthMe().then(data => {
+			if (!cancelled) setAuth(data);
+		});
 		return () => {
 			cancelled = true;
 		};
@@ -126,14 +114,14 @@ export function SidebarFooterActions({
 
 				{isAccountAdmin && (
 					<Button size="icon" variant="ghost" aria-label="Accounts and settings" asChild>
-						<Link href="/admin">
+						<Link href="/admin" prefetch={false}>
 							<SettingsIcon size={18} />
 						</Link>
 					</Button>
 				)}
 
 				<Button size="icon" variant="ghost" aria-label="About Mongonaut" asChild>
-					<Link href="/about">
+					<Link href="/about" prefetch={false}>
 						<InfoIcon size={18} />
 					</Link>
 				</Button>

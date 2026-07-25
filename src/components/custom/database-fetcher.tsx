@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, ReactNode, useContext, useEffect, useState, useTransition } from 'react';
+import { createContext, ReactNode, useContext, useState, useTransition } from 'react';
 import { Document } from 'mongodb';
 import {
 	collectSidebarDatabaseInformation,
@@ -17,7 +17,16 @@ interface ViewerInfo {
 	globalReadonly: boolean;
 }
 
+export interface ShellData {
+	databases: Database[];
+	totalSize?: number;
+	serverInfo?: Document;
+	viewer?: ViewerInfo;
+	error?: string;
+}
+
 interface DatabaseFetcherProps {
+	initial: ShellData;
 	children: ReactNode;
 }
 
@@ -35,13 +44,12 @@ export function useDatabaseFetcher() {
 	return context;
 }
 
-export function DatabaseFetcher({ children }: DatabaseFetcherProps) {
-	const [databases, setDatabases] = useState<Database[]>([]);
-	const [totalSize, setTotalSize] = useState<number | undefined>(undefined);
-	const [serverInfo, setServerInfo] = useState<Document | undefined>(undefined);
-	const [viewer, setViewer] = useState<ViewerInfo | undefined>(undefined);
-	const [error, setError] = useState<string | undefined>(undefined);
-	const [initialLoading, setInitialLoading] = useState(true);
+export function DatabaseFetcher({ initial, children }: DatabaseFetcherProps) {
+	const [databases, setDatabases] = useState<Database[]>(initial.databases);
+	const [totalSize, setTotalSize] = useState<number | undefined>(initial.totalSize);
+	const [serverInfo, setServerInfo] = useState<Document | undefined>(initial.serverInfo);
+	const [viewer, setViewer] = useState<ViewerInfo | undefined>(initial.viewer);
+	const [error, setError] = useState<string | undefined>(initial.error);
 	const [isPending, startTransition] = useTransition();
 
 	const fetchAllData = async () => {
@@ -72,22 +80,11 @@ export function DatabaseFetcher({ children }: DatabaseFetcherProps) {
 		}
 	};
 
-	// Initial data fetch
-	useEffect(() => {
-		const fetchData = async () => {
-			await fetchAllData();
-			setInitialLoading(false);
-		};
-		void fetchData();
-	}, []);
-
 	const reloadData = async () => {
 		startTransition(() => {
 			void fetchAllData();
 		});
 	};
-
-	const isLoading = initialLoading || isPending;
 
 	return (
 		<DatabaseFetcherContext.Provider value={{ reloadData }}>
@@ -99,7 +96,7 @@ export function DatabaseFetcher({ children }: DatabaseFetcherProps) {
 				canCreateDatabase={viewer?.canCreateDatabase ?? false}
 				globalReadonly={viewer?.globalReadonly ?? false}
 				error={error}
-				loading={isLoading}
+				loading={isPending}
 			>
 				{children}
 			</DatabaseContent>

@@ -1,14 +1,13 @@
 'use client';
 
-import { scan } from 'react-scan';
-import { JSX, useEffect } from 'react';
+import { useEffect } from 'react';
 
-export function ReactScan(): JSX.Element {
+export function ReactScan() {
 	useEffect(() => {
-		scan({
-			enabled: true,
-		});
+		if (process.env.NODE_ENV === 'production') return;
+
+		void import('react-scan').then(({ scan }) => scan({ enabled: true }));
 	}, []);
 
-	return <></>;
+	return null;
 }

@@ -2,9 +2,6 @@
 
 import { useId, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import CodeMirror from '@uiw/react-codemirror';
-import { json } from '@codemirror/lang-json';
-import { vscodeDark } from '@uiw/codemirror-theme-vscode';
 import { CodeIcon, PlayIcon, PlusIcon, TablePropertiesIcon, XIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +13,7 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { usePreferredTheme } from '@/hooks/use-preferred-theme';
+import { LazyJsonEditor, preloadJsonEditor } from '@/components/custom/lazy-json-editor';
 import { escapeRegex } from '@/lib/utils';
 
 type QueryMode = 'find' | 'aggregate';
@@ -139,8 +136,6 @@ export function QueryPanel({
 	defaultPipeline,
 }: QueryPanelProps) {
 	const router = useRouter();
-	const theme = usePreferredTheme();
-	const editorTheme = theme === 'dark' ? vscodeDark : 'light';
 	const sortFieldId = useId();
 
 	const hasInitialFilter = !!defaultFilter && defaultFilter !== '{}';
@@ -256,7 +251,13 @@ export function QueryPanel({
 				<div className="flex items-center justify-between gap-2 border-b px-3 py-2">
 					<TabsList>
 						<TabsTrigger value="find">Find</TabsTrigger>
-						<TabsTrigger value="aggregate">Aggregate</TabsTrigger>
+						<TabsTrigger
+							value="aggregate"
+							onPointerEnter={preloadJsonEditor}
+							onFocus={preloadJsonEditor}
+						>
+							Aggregate
+						</TabsTrigger>
 					</TabsList>
 					<Button variant="ghost" size="sm" onClick={clearQuery} className="text-muted-foreground">
 						<XIcon size={14} />
@@ -267,7 +268,13 @@ export function QueryPanel({
 				<TabsContent value="find" className="space-y-3 p-3">
 					<div className="flex items-center justify-between">
 						<span className="text-xs font-medium text-muted-foreground">Filter</span>
-						<Button variant="ghost" size="sm" onClick={toggleFindInput}>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={toggleFindInput}
+							onPointerEnter={preloadJsonEditor}
+							onFocus={preloadJsonEditor}
+						>
 							{findInput === 'builder' ? (
 								<>
 									<CodeIcon size={14} />
@@ -350,15 +357,14 @@ export function QueryPanel({
 						</div>
 					) : (
 						<div className="overflow-hidden rounded-md border">
-							<CodeMirror
+							<LazyJsonEditor
 								value={filterJson}
 								height="140px"
-								extensions={[json()]}
 								onChange={value => {
 									setFilterJson(value);
 									if (filterError) setFilterError(null);
 								}}
-								theme={editorTheme}
+								lightTheme="default"
 								basicSetup={{ lineNumbers: true, foldGutter: false }}
 							/>
 						</div>
@@ -400,15 +406,14 @@ export function QueryPanel({
 				<TabsContent value="aggregate" className="space-y-3 p-3">
 					<span className="text-xs font-medium text-muted-foreground">Aggregation pipeline</span>
 					<div className="overflow-hidden rounded-md border">
-						<CodeMirror
+						<LazyJsonEditor
 							value={pipelineJson}
 							height="200px"
-							extensions={[json()]}
 							onChange={value => {
 								setPipelineJson(value);
 								if (pipelineError) setPipelineError(null);
 							}}
-							theme={editorTheme}
+							lightTheme="default"
 							basicSetup={{ lineNumbers: true, foldGutter: true }}
 						/>
 					</div>
