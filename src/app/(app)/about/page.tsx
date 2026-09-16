@@ -1,7 +1,8 @@
-import { Github, BookOpen, Code, Star, ExternalLink } from 'lucide-react';
+import { BookOpen, Code, Star, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { AppContainer } from '@/components/custom/app-container';
+import { GithubIcon } from '@/components/custom/github-icon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -25,7 +26,7 @@ const DOCS_LINKS: ResourceLink[] = [
 		href: 'https://github.com/withzu/mongonaut',
 		title: 'GitHub Repository',
 		description: 'View source code & contribute',
-		icon: <Github className="w-4 h-4 text-muted-foreground" aria-hidden="true" />,
+		icon: <GithubIcon className="w-4 h-4 text-muted-foreground" aria-hidden="true" />,
 	},
 ];
 
@@ -94,14 +95,7 @@ export default function AboutPage() {
 								target="_blank"
 								rel="noreferrer noopener"
 							>
-								<Image
-									src="/images/github-mark.svg"
-									alt=""
-									aria-hidden="true"
-									width={16}
-									height={16}
-									className="w-4 h-4 dark:invert"
-								/>
+								<GithubIcon className="w-4 h-4" aria-hidden="true" />
 								View on GitHub
 							</Link>
 						</Button>
