@@ -41,9 +41,16 @@ jobs:
           git config --local user.email "${{ steps.author.outputs.email }}"
           git config --local user.name "${{ steps.author.outputs.name }}"
           git add package.json
-          git commit -m "chore: update version to ${{ steps.extract_version.outputs.VERSION }}"
-          # Push to the actual default branch instead of a hardcoded name.
-          git push origin "HEAD:${DEFAULT_BRANCH}"
+          # A release commit usually bumps the version already. Without this
+          # guard `git commit` exits 1 on an unchanged tree and the whole
+          # publish job aborts before the image is ever built.
+          if git diff --staged --quiet; then
+            echo "package.json already at ${{ steps.extract_version.outputs.VERSION }}, nothing to commit"
+          else
+            git commit -m "chore: update version to ${{ steps.extract_version.outputs.VERSION }}"
+            # Push to the actual default branch instead of a hardcoded name.
+            git push origin "HEAD:${DEFAULT_BRANCH}"
+          fi
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -71,7 +78,15 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest
+            # A prerelease tag carries a hyphen and must not move "latest".
+            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+          labels: |
+            org.opencontainers.image.title=Mongonaut
+            org.opencontainers.image.description=A modern, open source MongoDB web interface built for self hosted environments.
+            org.opencontainers.image.url=https://mongonaut.org
+            org.opencontainers.image.documentation=https://mongonaut.org
+            org.opencontainers.image.vendor=The Zu Company
+            org.opencontainers.image.licenses=MIT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -81,6 +96,11 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          # A signed build record and a component list, so an operator can see
+          # what is inside the image before running it against their database.
+          provenance: mode=max
+          sbom: true
           cache-from: |
             type=gha,scope=amd64
             type=gha,scope=arm64
