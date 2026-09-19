@@ -1,6 +1,6 @@
 {
 	"name": "mongonaut",
-	"version": "0.1.7",
+	"version": "0.1.8",
 	"description": "A modern, open source MongoDB web interface built for self hosted environments.",
 	"license": "MIT",
 	"author": "The Zu Company (https://thezucompany.com)",
