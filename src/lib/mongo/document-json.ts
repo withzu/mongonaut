@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { BSON, type Document } from 'mongodb';
 
 const { EJSON } = BSON;
@@ -71,6 +72,16 @@ export function parseDocumentJsonArray(text: string): Document[] {
 
 export function stringifyDocumentId(id: unknown): string {
 	return stringifyDocumentJson(id);
+}
+
+/**
+ * Short fingerprint of a document as it was handed to the browser. Saving sends
+ * it back so the server can tell whether somebody else wrote to the same
+ * document in the meantime. BSON preserves field order, so serializing an
+ * unchanged document again produces the same string and the same revision.
+ */
+export function documentRevision(json: string): string {
+	return createHash('sha256').update(json).digest('hex').slice(0, 16);
 }
 
 export function parseDocumentId(idJson: string): unknown {

@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, ReactNode, useId, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
 	ChevronDownIcon,
 	CopyIcon,
@@ -44,6 +44,7 @@ import {
 	exportCollection,
 	listIndexes,
 	renameCollection,
+	type DocumentQuery,
 } from '@/actions/databaseOperation';
 import { useDatabaseFetcher } from '@/components/custom/database-fetcher';
 import { ConfirmNameDialog } from '@/components/custom/confirm-name-dialog';
@@ -75,6 +76,7 @@ function useCollectionActions({
 }: CollectionActionsOptions): { actions: CollectionAction[]; dialogs: ReactNode } {
 	const router = useRouter();
 	const pathname = usePathname();
+	const searchParams = useSearchParams();
 	const { reloadData } = useDatabaseFetcher();
 	const nameInputId = useId();
 
@@ -102,7 +104,19 @@ function useCollectionActions({
 	const handleDownload = async () => {
 		setIsBusy(true);
 		try {
-			const result = await exportCollection(database, collection);
+			// Only the collection actually on screen carries a query. The same menu
+			// opens from the sidebar for other collections, where the current URL
+			// parameters belong to a different collection entirely.
+			const query: DocumentQuery = isOnThisCollection
+				? {
+						mode: searchParams.get('mode') as DocumentQuery['mode'],
+						filter: searchParams.get('filter') ?? undefined,
+						sort: searchParams.get('sort') ?? undefined,
+						pipeline: searchParams.get('pipeline') ?? undefined,
+					}
+				: {};
+
+			const result = await exportCollection(database, collection, query);
 			if (!result.success) {
 				toast.error(result.error);
 				return;
@@ -111,7 +125,7 @@ function useCollectionActions({
 			const url = URL.createObjectURL(blob);
 			const link = document.createElement('a');
 			link.href = url;
-			link.download = `${collection}.json`;
+			link.download = result.data.filtered ? `${collection}-query.json` : `${collection}.json`;
 			document.body.appendChild(link);
 			link.click();
 			link.remove();
@@ -120,6 +134,8 @@ function useCollectionActions({
 				toast.warning(
 					`Exported the first ${result.data.limit} documents. Raise MONGONAUT_EXPORT_MAX_DOCUMENTS for more.`,
 				);
+			} else if (result.data.filtered) {
+				toast.success(`${result.data.count} documents matching the current query downloaded`);
 			} else {
 				toast.success(`${result.data.count} documents downloaded`);
 			}
@@ -221,10 +237,14 @@ function useCollectionActions({
 			onSelect: () => router.push(collectionPath),
 		});
 	}
+	const hasActiveQuery =
+		isOnThisCollection &&
+		(!!searchParams.get('filter') || !!searchParams.get('sort') || !!searchParams.get('pipeline'));
+
 	actions.push(
 		{
 			key: 'download',
-			label: 'Download as JSON',
+			label: hasActiveQuery ? 'Download query result' : 'Download as JSON',
 			icon: <DownloadIcon />,
 			onSelect: handleDownload,
 		},

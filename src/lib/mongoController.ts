@@ -333,7 +333,16 @@ export class MongoController {
 	): Promise<ControllerResult<PaginatedDocuments>> {
 		return this.run('Could not run the query', async () => {
 			const collection = this.client.db(dbName).collection(collectionName);
-			const total = await collection.countDocuments(filter, this.queryOptions);
+			// An exact count scans everything the filter does not narrow down, which
+			// can outlive the query budget on a large collection. The documents
+			// themselves are the point of the request, so a count that does not
+			// finish degrades to "unknown total" instead of failing the query.
+			let total: number | null = null;
+			try {
+				total = await collection.countDocuments(filter, this.queryOptions);
+			} catch {
+				total = null;
+			}
 			const cursor = collection.find(filter, this.documentReadOptions);
 			if (sort && Object.keys(sort).length > 0) cursor.sort(sort);
 			const documents = await cursor
@@ -374,17 +383,50 @@ export class MongoController {
 		dbName: string,
 		collectionName: string,
 		limit: number,
+		filter: Filter<Document> = {},
+		sort?: Sort,
 	): Promise<ControllerResult<{ documents: Document[]; truncated: boolean }>> {
 		return this.run('Could not read the documents', async () => {
+			const cursor = this.client
+				.db(dbName)
+				.collection(collectionName)
+				.find(filter, this.documentReadOptions);
+			if (sort && Object.keys(sort).length > 0) cursor.sort(sort);
+			const documents = await cursor.limit(limit + 1).toArray();
+			const truncated = documents.length > limit;
+			if (truncated) documents.pop();
+			return { documents, truncated };
+		});
+	}
+
+	public async exportAggregation(
+		dbName: string,
+		collectionName: string,
+		pipeline: Document[],
+		limit: number,
+	): Promise<ControllerResult<{ documents: Document[]; truncated: boolean }>> {
+		return this.run('Could not run the aggregation', async () => {
 			const documents = await this.client
 				.db(dbName)
 				.collection(collectionName)
-				.find({}, this.documentReadOptions)
-				.limit(limit + 1)
+				.aggregate([...pipeline, { $limit: limit + 1 }], this.documentReadOptions)
 				.toArray();
 			const truncated = documents.length > limit;
 			if (truncated) documents.pop();
 			return { documents, truncated };
+		});
+	}
+
+	public async findDocumentById(
+		dbName: string,
+		collectionName: string,
+		documentId: unknown,
+	): Promise<ControllerResult<Document | null>> {
+		return this.run('Could not read the document', async () => {
+			return this.client
+				.db(dbName)
+				.collection(collectionName)
+				.findOne({ _id: documentId } as Filter<Document>, this.documentReadOptions);
 		});
 	}
 

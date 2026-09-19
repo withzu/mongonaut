@@ -36,12 +36,14 @@ const MemoizedJsonEditor = memo<ReadonlyJsonEditorProps>(ClientJsonEditor);
 export function DocumentView({
 	data,
 	documentIdJson,
+	revision,
 	database,
 	collection,
 	isReadonly,
 }: {
 	data: string;
 	documentIdJson: string | null;
+	revision: string;
 	database: string;
 	collection: string;
 	isReadonly: boolean;
@@ -123,6 +125,7 @@ export function DocumentView({
 					collection={collection}
 					initialValue={data}
 					documentIdJson={documentIdJson}
+					revision={revision}
 				/>
 			)}
 

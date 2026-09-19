@@ -3,7 +3,7 @@ import { getAuthConfig } from '@/lib/auth/config';
 import { readSessionToken, SESSION_COOKIE } from '@/lib/auth/session';
 
 const PUBLIC_PREFIXES = ['/login', '/setup', '/api/auth/'];
-const PUBLIC_FILES = ['/favicon.ico', '/robots.txt', '/api/health'];
+const PUBLIC_FILES = ['/favicon.ico', '/robots.txt', '/api/health', '/api/ready'];
 
 function isPublic(pathname: string): boolean {
 	if (PUBLIC_FILES.includes(pathname)) return true;

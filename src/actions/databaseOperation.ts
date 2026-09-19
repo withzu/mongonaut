@@ -30,6 +30,7 @@ import { INTERNAL_DB } from '@/lib/auth/accounts';
 import { audit } from '@/lib/mongo/audit';
 import { findServerJsOperators } from '@/lib/mongo/pipeline';
 import {
+	documentRevision,
 	parseDocumentId,
 	parseDocumentJsonArray,
 	parseDocumentJsonObject,
@@ -218,7 +219,13 @@ export const collectionExists = async (database: string, collection: string): Pr
 export interface DocumentEnvelope {
 	json: string;
 	idJson: string | null;
+	/** Fingerprint of `json`, sent back on save to detect a concurrent write. */
+	revision: string;
 }
+
+// Not exported: a "use server" module may only export async functions.
+const CONFLICT_MESSAGE =
+	'This document changed after you opened it. Reload the collection and apply your change again.';
 
 export interface DocumentPage {
 	documents: DocumentEnvelope[];
@@ -229,21 +236,39 @@ export interface DocumentPage {
 	hasMore: boolean;
 }
 
-export interface LoadDocumentsInput {
-	database: string;
-	collection: string;
+export interface DocumentQuery {
 	mode?: 'browse' | 'find' | 'aggregate';
 	filter?: string;
 	sort?: string;
 	pipeline?: string;
+}
+
+export interface LoadDocumentsInput extends DocumentQuery {
+	database: string;
+	collection: string;
 	page?: unknown;
 	pageSize?: unknown;
 }
 
-function envelope(document: Document): DocumentEnvelope {
+function resolveMode(query: DocumentQuery): 'browse' | 'find' | 'aggregate' {
+	if (query.mode === 'aggregate' && query.pipeline) return 'aggregate';
+	if (query.mode === 'find' || query.filter || query.sort) return 'find';
+	return 'browse';
+}
+
+function parseFilterAndSort(query: DocumentQuery): { filter: Filter<Document>; sort: Sort } {
 	return {
-		json: stringifyDocumentJson(document, 2),
+		filter: query.filter ? (EJSON.parse(query.filter, { relaxed: false }) as Filter<Document>) : {},
+		sort: query.sort ? (EJSON.parse(query.sort, { relaxed: false }) as Sort) : {},
+	};
+}
+
+function envelope(document: Document): DocumentEnvelope {
+	const json = stringifyDocumentJson(document, 2);
+	return {
+		json,
 		idJson: '_id' in document ? stringifyDocumentId(document._id) : null,
+		revision: documentRevision(json),
 	};
 }
 
@@ -254,12 +279,7 @@ export const loadDocuments = async (
 	const page = clampInt(input.page, 1, { min: 1, max: 1_000_000 });
 	const pageSize = clampInt(input.pageSize, DEFAULT_PAGE_SIZE, { min: 1, max: maxPageSize() });
 
-	const mode =
-		input.mode === 'aggregate' && input.pipeline
-			? 'aggregate'
-			: input.mode === 'find' || input.filter || input.sort
-				? 'find'
-				: 'browse';
+	const mode = resolveMode(input);
 
 	if (mode === 'aggregate') {
 		let pipeline: Document[];
@@ -302,10 +322,7 @@ export const loadDocuments = async (
 		let filter: Filter<Document>;
 		let sort: Sort;
 		try {
-			filter = input.filter
-				? (EJSON.parse(input.filter, { relaxed: false }) as Filter<Document>)
-				: {};
-			sort = input.sort ? (EJSON.parse(input.sort, { relaxed: false }) as Sort) : {};
+			({ filter, sort } = parseFilterAndSort(input));
 		} catch (error) {
 			return failure(messageOf(error, 'Invalid query JSON'));
 		}
@@ -339,21 +356,73 @@ function toDocumentPage(result: {
 export const exportCollection = async (
 	database: string,
 	collection: string,
-): Promise<ActionResult<{ json: string; count: number; truncated: boolean; limit: number }>> => {
-	const guard = await guardAccess({ database, collection });
-	if (!guard.allowed) return failure(guard.error);
-
+	query: DocumentQuery = {},
+): Promise<
+	ActionResult<{
+		json: string;
+		count: number;
+		truncated: boolean;
+		limit: number;
+		filtered: boolean;
+	}>
+> => {
 	const limit = exportLimit();
-	const result = await mongo.exportDocuments(database, collection, limit);
+	const mode = resolveMode(query);
+
+	// The export follows whatever the user is currently looking at. Exporting the
+	// whole collection while a filter is applied would hand back documents the
+	// user never asked for.
+	let result: Awaited<ReturnType<typeof mongo.exportDocuments>>;
+	let actor: string;
+
+	if (mode === 'aggregate') {
+		let pipeline: Document[];
+		try {
+			const parsed = EJSON.parse(query.pipeline as string, { relaxed: false });
+			if (!Array.isArray(parsed)) throw new Error('Aggregation pipeline must be a JSON array');
+			pipeline = parsed as Document[];
+		} catch (error) {
+			return failure(messageOf(error, 'Invalid pipeline JSON'));
+		}
+
+		const guard = await guardAggregation(database, collection, pipeline);
+		if (!guard.allowed) return failure(guard.error);
+		if (guard.hasWriteStage) {
+			return failure('An aggregation that writes cannot be exported. Remove $out or $merge.');
+		}
+		actor = describeActor(guard.ctx);
+		result = await mongo.exportAggregation(database, collection, pipeline, limit);
+	} else {
+		const guard = await guardAccess({ database, collection });
+		if (!guard.allowed) return failure(guard.error);
+		actor = describeActor(guard.ctx);
+
+		let filter: Filter<Document>;
+		let sort: Sort;
+		try {
+			({ filter, sort } = mode === 'find' ? parseFilterAndSort(query) : { filter: {}, sort: {} });
+		} catch (error) {
+			return failure(messageOf(error, 'Invalid query JSON'));
+		}
+
+		if (mode === 'find' && !isServerJsAllowed()) {
+			const serverJs = findServerJsOperators([filter, sort]);
+			if (serverJs.length > 0) return failure(serverJsMessage(serverJs));
+		}
+
+		result = await mongo.exportDocuments(database, collection, limit, filter, sort);
+	}
+
 	if (!result.success) return result;
 
 	audit({
 		action: 'collection.export',
-		actor: describeActor(guard.ctx),
+		actor,
 		outcome: 'success',
 		database,
 		collection,
 		count: result.data.documents.length,
+		detail: mode === 'browse' ? undefined : `mode=${mode}`,
 	});
 
 	return success({
@@ -362,6 +431,7 @@ export const exportCollection = async (
 		count: result.data.documents.length,
 		truncated: result.data.truncated,
 		limit,
+		filtered: mode !== 'browse',
 	});
 };
 
@@ -417,6 +487,7 @@ export const updateDocument = async (
 	collection: string,
 	idJson: string,
 	documentJson: string,
+	expectedRevision?: string,
 ): Promise<ActionResult<{ modified: boolean }>> => {
 	const guard = await guardAccess({ database, collection, write: true });
 	if (!guard.allowed) return failure(guard.error);
@@ -428,6 +499,26 @@ export const updateDocument = async (
 		replacement = parseDocumentJsonObject(documentJson);
 	} catch (error) {
 		return failure(messageOf(error, 'Invalid JSON'));
+	}
+
+	// A save replaces the whole document, so without this check two people
+	// editing the same record would silently overwrite each other.
+	if (expectedRevision) {
+		const current = await mongo.findDocumentById(database, collection, documentId);
+		if (!current.success) return current;
+		if (!current.data) return failure('The document no longer exists');
+		if (documentRevision(stringifyDocumentJson(current.data, 2)) !== expectedRevision) {
+			audit({
+				action: 'document.update',
+				actor: describeActor(guard.ctx),
+				outcome: 'denied',
+				database,
+				collection,
+				target: idJson,
+				detail: 'revision conflict',
+			});
+			return failure(CONFLICT_MESSAGE);
+		}
 	}
 
 	const result = await mongo.replaceDocument(database, collection, documentId, replacement);

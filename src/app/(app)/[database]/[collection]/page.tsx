@@ -165,6 +165,7 @@ const CollectionDetailPage: FC<Props> = async ({ params, searchParams }) => {
 							key={entry.idJson ?? `result-${index}`}
 							data={entry.json}
 							documentIdJson={entry.idJson}
+							revision={entry.revision}
 							database={database}
 							collection={collection}
 							isReadonly={isReadonly}

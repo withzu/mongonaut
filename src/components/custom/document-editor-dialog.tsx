@@ -31,6 +31,8 @@ interface DocumentEditorDialogProps {
 	initialValue: string;
 	/** Extended JSON of the `_id` being edited. Required in edit mode. */
 	documentIdJson?: string | null;
+	/** Fingerprint of the document as it was loaded, used to detect a concurrent write. */
+	revision?: string;
 }
 
 const COPY: Record<DocumentEditorMode, { title: string; submit: string }> = {
@@ -48,6 +50,7 @@ export function DocumentEditorDialog({
 	collection,
 	initialValue,
 	documentIdJson,
+	revision,
 }: DocumentEditorDialogProps) {
 	const router = useRouter();
 	const [jsonInput, setJsonInput] = useState(initialValue);
@@ -106,13 +109,20 @@ export function DocumentEditorDialog({
 				return;
 			}
 
-			const result = await updateDocument(database, collection, documentIdJson, jsonInput);
+			const result = await updateDocument(
+				database,
+				collection,
+				documentIdJson,
+				jsonInput,
+				revision,
+			);
 			if (result.success) {
 				toast.success(result.data.modified ? 'Document updated' : 'No changes were needed');
 				onOpenChange(false);
 				router.refresh();
 			} else {
-				toast.error(result.error);
+				// A conflict keeps the dialog open so the edit is not lost.
+				toast.error(result.error, { duration: 8000 });
 			}
 		} catch (error) {
 			console.error(error);
