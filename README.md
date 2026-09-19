@@ -13,9 +13,9 @@
 <p align="center">
   <a href="https://mongonaut.org">Website</a>
   ·
-  <a href="https://mongonaut.org/docs">Documentation</a>
+  <a href="https://mongonaut.org">Documentation</a>
   ·
-  <a href="https://mongonaut.org/docs/installation">Installation</a>
+  <a href="https://mongonaut.org/installation">Installation</a>
   ·
   <a href="https://github.com/withzu/mongonaut/releases">Releases</a>
   ·
@@ -52,7 +52,8 @@ Mongonaut is built with Next.js, React, TypeScript, and the official MongoDB Nod
 * Filter and sort documents with MongoDB queries
 * Run aggregation pipelines
 * Create, edit, and delete documents without losing BSON types
-* Import documents from a JSON file and export a collection as JSON
+* Get a warning instead of a silent overwrite when someone else changed the same document
+* Import documents from a JSON file and export a collection, or the current query result, as JSON
 * View, create, and drop indexes
 * Create, rename, duplicate, and delete collections
 * Delete databases when write access is enabled
@@ -201,6 +202,38 @@ image: ghcr.io/withzu/mongonaut:0.1.6
 ```
 
 Available versions are listed on the [GitHub Releases page](https://github.com/withzu/mongonaut/releases).
+
+Release images carry a software bill of materials and a provenance attestation:
+
+```bash
+docker buildx imagetools inspect ghcr.io/withzu/mongonaut:latest
+```
+
+## Health Checks
+
+Mongonaut exposes two unauthenticated endpoints for orchestrators. Both are excluded from the login redirect and neither returns data from your databases.
+
+| Endpoint | Meaning | Status |
+| --- | --- | --- |
+| `/api/health` | Liveness. The process is up and answering. It does not contact MongoDB, so a slow database never triggers a restart loop. | Always `200` |
+| `/api/ready` | Readiness. Reports the running version, whether MongoDB is reachable, and whether the authentication configuration is valid. | `200` when ready, `503` otherwise |
+
+The container health check uses `/api/ready`, so `docker ps` reports unhealthy while MongoDB is unreachable or `MONGONAUT_AUTH_SECRET` is missing.
+
+```bash
+curl -s http://localhost:8081/api/ready
+```
+
+```json
+{
+  "status": "ready",
+  "version": "0.1.7",
+  "mongo": "connected",
+  "auth": { "mode": "ACCOUNT", "enabled": true, "misconfigured": false }
+}
+```
+
+Use `/api/health` for a Kubernetes liveness probe and `/api/ready` for a readiness probe.
 
 ## Authentication
 
@@ -414,7 +447,7 @@ Every change to data or accounts writes one JSON line to stdout:
 
 Denied attempts are recorded as well. Set `MONGONAUT_AUDIT_LOG=false` to turn this off.
 
-The documentation includes a guide for securing Mongonaut with [Cloudflare Zero Trust Tunnel](https://mongonaut.org/docs/security/zero-trust-tunnel).
+The documentation includes a guide for securing Mongonaut with [Cloudflare Zero Trust Tunnel](https://mongonaut.org/security/zero-trust-tunnel).
 
 ## Local Development
 
