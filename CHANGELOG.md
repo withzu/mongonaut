@@ -15,6 +15,7 @@ carried no written notes.
 * Readiness endpoint at `/api/ready`, reporting the running version, MongoDB connectivity and the resolved authentication configuration.
 * OCI image labels, so `docker inspect` identifies source, documentation, vendor and license on any image, including one built locally.
 * Published images now carry a software bill of materials and a full provenance attestation.
+* Release images are additionally published to Docker Hub as `withzu/mongonaut`.
 
 ### Changed
 
