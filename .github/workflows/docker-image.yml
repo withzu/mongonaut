@@ -78,8 +78,9 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            # A prerelease tag carries a hyphen and must not move "latest".
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+          # "latest" follows the semver tags and is skipped for prereleases.
+          flavor: |
+            latest=auto
           labels: |
             org.opencontainers.image.title=Mongonaut
             org.opencontainers.image.description=A modern, open source MongoDB web interface built for self hosted environments.
@@ -107,4 +108,3 @@ jobs:
           cache-to: |
             type=gha,scope=amd64,mode=max
             type=gha,scope=arm64,mode=max
-          parallel: true
