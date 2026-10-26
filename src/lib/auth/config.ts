@@ -124,9 +124,7 @@ function readExternalURL(): string | null {
 	try {
 		new URL(externalURL);
 	} catch {
-		console.error(
-			`[auth] MONGONAUT_EXTERNAL_URL "${externalURL}" is not a valid URL, ignoring it`,
-		);
+		console.error(`[auth] MONGONAUT_EXTERNAL_URL "${externalURL}" is not a valid URL, ignoring it`);
 		return null;
 	}
 	return externalURL;
