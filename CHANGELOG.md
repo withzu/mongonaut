@@ -25,6 +25,7 @@ carried no written notes.
 
 ### Fixed
 
+* Redirects no longer point to the internal listen address, such as `0.0.0.0:8081`, when Mongonaut runs behind a reverse proxy. Set the new `MONGONAUT_EXTERNAL_URL` to the public URL of the instance. It is also used for the derived OIDC callback URL and to mark cookies `Secure` when a proxy terminates TLS.
 * Saving a document no longer silently overwrites somebody else's change. Every document is handed to the browser with a revision, and a save whose revision no longer matches the stored document is refused with a conflict notice instead of replacing the newer version.
 * Exporting now follows the query on screen. A filter, a sort or an aggregation pipeline is applied to the export, where previously the export always returned the beginning of the unfiltered collection.
 * A filtered query no longer fails because the exact document count exceeds the query budget. The count falls back to unknown and the matching documents are still returned.

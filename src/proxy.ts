@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthConfig } from '@/lib/auth/config';
+import { getAuthConfig, getPublicBaseURL } from '@/lib/auth/config';
 import { readSessionToken, SESSION_COOKIE } from '@/lib/auth/session';
 
 const PUBLIC_PREFIXES = ['/login', '/setup', '/api/auth/'];
@@ -33,9 +33,7 @@ export async function proxy(req: NextRequest) {
 		return NextResponse.next();
 	}
 
-	const loginUrl = req.nextUrl.clone();
-	loginUrl.pathname = '/login';
-	loginUrl.search = '';
+	const loginUrl = new URL('/login', getPublicBaseURL(req.url));
 	const next = pathname + (search || '');
 	if (next && next !== '/' && !next.startsWith('/login')) {
 		loginUrl.searchParams.set('next', next);
