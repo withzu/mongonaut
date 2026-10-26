@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthConfig } from '@/lib/auth/config';
+import { getAuthConfig, getPublicBaseURL } from '@/lib/auth/config';
 import { exchangeCodeForTokens, isEmailAllowed, verifyIdToken } from '@/lib/auth/oidc';
 import {
 	buildSessionCookieAttributes,
@@ -24,7 +24,7 @@ interface OidcFlowState {
 }
 
 function loginErrorRedirect(req: NextRequest, code: string): NextResponse {
-	const url = new URL('/login', req.url);
+	const url = new URL('/login', getPublicBaseURL(req.url));
 	url.searchParams.set('error', code);
 	const res = NextResponse.redirect(url);
 	res.cookies.set(OIDC_FLOW_COOKIE, '', { path: '/', maxAge: 0 });
@@ -100,7 +100,7 @@ export async function GET(req: NextRequest) {
 		outcome: 'success',
 	});
 
-	const target = new URL(safeInternalPath(flow.next), req.url);
+	const target = new URL(safeInternalPath(flow.next), getPublicBaseURL(req.url));
 
 	const res = NextResponse.redirect(target);
 	res.cookies.set(SESSION_COOKIE, token, {

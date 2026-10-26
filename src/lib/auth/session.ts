@@ -1,4 +1,4 @@
-import { AuthMode } from '@/lib/auth/config';
+import { AuthMode, getPublicBaseURL } from '@/lib/auth/config';
 
 export const SESSION_COOKIE = 'mongonaut_session';
 export const OIDC_FLOW_COOKIE = 'mongonaut_oidc_flow';
@@ -143,7 +143,7 @@ export async function sha256Base64Url(input: string): Promise<string> {
 
 export function isSecureRequest(url: string): boolean {
 	try {
-		return new URL(url).protocol === 'https:';
+		return new URL(getPublicBaseURL(url)).protocol === 'https:';
 	} catch {
 		return false;
 	}

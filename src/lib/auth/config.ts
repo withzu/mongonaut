@@ -20,6 +20,10 @@ export interface AuthConfig {
 	oidc: OidcConfig | null;
 }
 
+export interface ExternalURLInfo {
+	url: string | null;
+}
+
 const VALID_MODES: AuthMode[] = ['NONE', 'STATIC_PASSWORD', 'OIDC', 'ACCOUNT'];
 
 function readMode(): AuthMode {
@@ -110,4 +114,32 @@ export function getPublicAuthInfo(): PublicAuthInfo {
 			(cfg.mode === 'STATIC_PASSWORD' && !cfg.staticPassword) ||
 			(cfg.mode === 'OIDC' && !cfg.oidc));
 	return { mode: cfg.mode, enabled, misconfigured };
+}
+
+let cachedExternalURL: ExternalURLInfo | null = null;
+
+function readExternalURL(): string | null {
+	const externalURL = env('MONGONAUT_EXTERNAL_URL', '').trim();
+	if (!externalURL) return null;
+	try {
+		new URL(externalURL);
+	} catch {
+		console.error(`[auth] MONGONAUT_EXTERNAL_URL "${externalURL}" is not a valid URL, ignoring it`);
+		return null;
+	}
+	return externalURL;
+}
+
+export function getExternalURLInfo(): ExternalURLInfo {
+	if (!cachedExternalURL) cachedExternalURL = { url: readExternalURL() };
+	return cachedExternalURL;
+}
+
+/**
+ * Base URL for redirects and other absolute URLs handed to the browser. Behind
+ * a reverse proxy the request URL can be the internal listen address, so the
+ * configured external URL wins over it.
+ */
+export function getPublicBaseURL(reqUrl: string): string {
+	return getExternalURLInfo().url || reqUrl;
 }

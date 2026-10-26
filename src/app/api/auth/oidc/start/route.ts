@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthConfig } from '@/lib/auth/config';
+import { getAuthConfig, getPublicBaseURL } from '@/lib/auth/config';
 import { buildAuthorizationUrl } from '@/lib/auth/oidc';
 import {
 	isSecureRequest,
@@ -23,14 +23,14 @@ interface OidcFlowState {
 
 function resolveRedirectUri(req: NextRequest, override: string | null): string {
 	if (override) return override;
-	const url = new URL('/api/auth/oidc/callback', req.url);
+	const url = new URL('/api/auth/oidc/callback', getPublicBaseURL(req.url));
 	return url.toString();
 }
 
 export async function GET(req: NextRequest) {
 	const cfg = getAuthConfig();
 	if (cfg.mode !== 'OIDC' || !cfg.oidc || !cfg.secret) {
-		return NextResponse.redirect(new URL('/login', req.url));
+		return NextResponse.redirect(new URL('/login', getPublicBaseURL(req.url)));
 	}
 
 	const url = new URL(req.url);

@@ -282,7 +282,7 @@ MONGONAUT_OIDC_CLIENT_SECRET=replace-with-the-client-secret
 MONGONAUT_OIDC_SCOPES=openid profile email
 ```
 
-Mongonaut automatically derives the callback URL from the incoming request:
+Mongonaut automatically derives the callback URL from `MONGONAUT_EXTERNAL_URL`, or from the incoming request when it is not set:
 
 ```text
 https://your-mongonaut-domain.example/api/auth/oidc/callback
@@ -358,9 +358,15 @@ access could use them to occupy database CPU, so they stay disabled unless you e
 | `MONGONAUT_AUTH_SECRET` | Secret used to protect authentication sessions. Required for every mode except `NONE`, minimum 32 characters | None |
 | `MONGONAUT_SESSION_TTL` | Session lifetime in seconds | `86400` |
 | `MONGONAUT_AUTH_PASSWORD` | Shared password used by `STATIC_PASSWORD` mode | None |
+| `MONGONAUT_EXTERNAL_URL` | Public base URL of Mongonaut, for example `https://mongonaut.example.com`. Used for all redirects, the derived OIDC callback URL, and to decide whether cookies are marked `Secure` | Derived from the incoming request |
 
 A secret shorter than 32 characters is rejected and logged as a misconfiguration. Mongonaut then
 refuses all data access until it is replaced.
+
+Behind a reverse proxy, the request URL Mongonaut sees can be its internal listen address, such as
+`http://0.0.0.0:8081`, instead of the address in the browser. Set `MONGONAUT_EXTERNAL_URL` to the
+public URL when redirects point to such an internal address, or when a proxy terminates TLS and
+session cookies would otherwise be sent without the `Secure` flag.
 
 ### Login Protection
 
@@ -389,7 +395,7 @@ limit.
 | `MONGONAUT_OIDC_CLIENT_ID` | OIDC client identifier | None |
 | `MONGONAUT_OIDC_CLIENT_SECRET` | OIDC client secret | None |
 | `MONGONAUT_OIDC_SCOPES` | Space separated OIDC scopes | `openid profile email` |
-| `MONGONAUT_OIDC_REDIRECT_URL` | Explicit OIDC callback URL | Derived from the incoming request |
+| `MONGONAUT_OIDC_REDIRECT_URL` | Explicit OIDC callback URL | Derived from `MONGONAUT_EXTERNAL_URL` or the incoming request |
 | `MONGONAUT_OIDC_ALLOWED_EMAILS` | Optional comma separated email allowlist | All authenticated identities |
 
 ### Account Mode
