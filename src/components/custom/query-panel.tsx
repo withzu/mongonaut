@@ -80,7 +80,7 @@ function coerce(raw: string): unknown {
 		if (BigInt.asIntN(64, exact) === exact) return { $numberLong: exact.toString() };
 	}
 	if (trimmed !== '' && Number.isFinite(num)) return num;
-	return raw;
+	return trimmed;
 }
 
 function regexClause(field: string, pattern: string, escape: boolean): Record<string, unknown> {
