@@ -142,6 +142,8 @@ const CollectionDetailPage: FC<Props> = async ({ params, searchParams }) => {
 				)}
 
 				<QueryPanel
+					database={database}
+					collection={collection}
 					defaultMode={mode === 'aggregate' ? 'aggregate' : 'find'}
 					defaultFilter={query?.filter}
 					defaultSort={query?.sort}

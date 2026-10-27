@@ -3,6 +3,8 @@
 import { useId, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { CodeIcon, PlayIcon, PlusIcon, TablePropertiesIcon, XIcon } from 'lucide-react';
+import { toast } from 'sonner';
+import { runWritePipeline } from '@/actions/databaseOperation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -28,6 +30,8 @@ interface BuilderRow {
 }
 
 interface QueryPanelProps {
+	database: string;
+	collection: string;
 	defaultMode?: QueryMode;
 	defaultFilter?: string;
 	defaultSort?: string;
@@ -137,6 +141,8 @@ function buildFilter(rows: BuilderRow[]): Record<string, unknown> {
 }
 
 export function QueryPanel({
+	database,
+	collection,
 	defaultMode = 'find',
 	defaultFilter,
 	defaultSort,
@@ -167,6 +173,7 @@ export function QueryPanel({
 
 	const [pipelineJson, setPipelineJson] = useState(defaultPipeline || PIPELINE_PLACEHOLDER);
 	const [pipelineError, setPipelineError] = useState<string | null>(null);
+	const [isRunningPipeline, setIsRunningPipeline] = useState(false);
 
 	const updateRow = (index: number, patch: Partial<BuilderRow>) => {
 		setRows(prev => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -214,7 +221,7 @@ export function QueryPanel({
 		pushQuery(params);
 	};
 
-	const runAggregate = () => {
+	const runAggregate = async () => {
 		try {
 			const parsed = JSON.parse(pipelineJson);
 			if (!Array.isArray(parsed)) {
@@ -226,6 +233,28 @@ export function QueryPanel({
 			return;
 		}
 		setPipelineError(null);
+
+		// A pipeline with $out or $merge never goes into the URL, where every
+		// reload or shared link would run it again. It runs here, once.
+		setIsRunningPipeline(true);
+		try {
+			const result = await runWritePipeline(database, collection, pipelineJson);
+			if (!result.success) {
+				setPipelineError(result.error);
+				return;
+			}
+			if (result.data.executed) {
+				toast.success('Aggregation ran and wrote its output');
+				router.refresh();
+				return;
+			}
+		} catch (error) {
+			setPipelineError(error instanceof Error ? error.message : 'Could not run the aggregation');
+			return;
+		} finally {
+			setIsRunningPipeline(false);
+		}
+
 		const params = new URLSearchParams();
 		params.set('mode', 'aggregate');
 		params.set('pipeline', pipelineJson.trim());
@@ -428,7 +457,7 @@ export function QueryPanel({
 						<span role="alert" className="text-destructive text-xs">
 							{pipelineError}
 						</span>
-						<Button onClick={runAggregate}>
+						<Button onClick={runAggregate} disabled={isRunningPipeline}>
 							<PlayIcon size={14} />
 							Run aggregation
 						</Button>

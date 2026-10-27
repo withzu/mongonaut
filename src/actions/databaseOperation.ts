@@ -226,6 +226,9 @@ export interface DocumentEnvelope {
 const CONFLICT_MESSAGE =
 	'This document changed after you opened it. Reload the collection and apply your change again.';
 
+const WRITE_PIPELINE_FROM_URL_MESSAGE =
+	'This pipeline writes data with $out or $merge, so it is not run from a link. Press "Run aggregation" to run it.';
+
 export interface DocumentPage {
 	documents: DocumentEnvelope[];
 	page: number;
@@ -262,6 +265,12 @@ function parseFilterAndSort(query: DocumentQuery): { filter: Filter<Document>; s
 	};
 }
 
+function parsePipeline(text: string): Document[] {
+	const parsed = parseDocumentJson(text);
+	if (!Array.isArray(parsed)) throw new Error('Aggregation pipeline must be a JSON array');
+	return parsed as Document[];
+}
+
 function envelope(document: Document): DocumentEnvelope {
 	const json = stringifyDocumentJson(document, 2);
 	return {
@@ -283,34 +292,19 @@ export const loadDocuments = async (
 	if (mode === 'aggregate') {
 		let pipeline: Document[];
 		try {
-			const parsed = parseDocumentJson(input.pipeline as string);
-			if (!Array.isArray(parsed)) throw new Error('Aggregation pipeline must be a JSON array');
-			pipeline = parsed as Document[];
+			pipeline = parsePipeline(input.pipeline as string);
 		} catch (error) {
 			return failure(messageOf(error, 'Invalid pipeline JSON'));
 		}
 
 		const guard = await guardAggregation(database, collection, pipeline);
 		if (!guard.allowed) return failure(guard.error);
+		// Pages are loaded with a GET that any link or reload can trigger, so a
+		// write here would let a crafted URL change data with the viewer's rights.
+		if (guard.hasWriteStage) return failure(WRITE_PIPELINE_FROM_URL_MESSAGE);
 
-		const result = await mongo.aggregateDocuments(
-			database,
-			collection,
-			pipeline,
-			page,
-			pageSize,
-			guard.hasWriteStage,
-		);
+		const result = await mongo.aggregateDocuments(database, collection, pipeline, page, pageSize);
 		if (!result.success) return result;
-		if (guard.hasWriteStage) {
-			audit({
-				action: 'collection.aggregate.write',
-				actor: describeActor(guard.ctx),
-				outcome: 'success',
-				database,
-				collection,
-			});
-		}
 		return success(toDocumentPage(result.data));
 	}
 
@@ -377,9 +371,7 @@ export const exportCollection = async (
 	if (mode === 'aggregate') {
 		let pipeline: Document[];
 		try {
-			const parsed = parseDocumentJson(query.pipeline as string);
-			if (!Array.isArray(parsed)) throw new Error('Aggregation pipeline must be a JSON array');
-			pipeline = parsed as Document[];
+			pipeline = parsePipeline(query.pipeline as string);
 		} catch (error) {
 			return failure(messageOf(error, 'Invalid pipeline JSON'));
 		}
@@ -437,6 +429,41 @@ export const exportCollection = async (
 // ---------------------------------------------------------------------------
 // Writing documents
 // ---------------------------------------------------------------------------
+
+/**
+ * Runs a pipeline that writes with $out or $merge. This is the only way such a
+ * pipeline executes: as a server action it needs a same-origin POST, which a
+ * link or a reload cannot produce. A read-only pipeline is not executed here
+ * and reports `executed: false`, so the caller shows its results as usual.
+ */
+export const runWritePipeline = async (
+	database: string,
+	collection: string,
+	pipelineJson: string,
+): Promise<ActionResult<{ executed: boolean }>> => {
+	let pipeline: Document[];
+	try {
+		pipeline = parsePipeline(pipelineJson);
+	} catch (error) {
+		return failure(messageOf(error, 'Invalid pipeline JSON'));
+	}
+
+	const guard = await guardAggregation(database, collection, pipeline);
+	if (!guard.allowed) return failure(guard.error);
+	if (!guard.hasWriteStage) return success({ executed: false });
+
+	const result = await mongo.runWritePipeline(database, collection, pipeline);
+	audit({
+		action: 'collection.aggregate.write',
+		actor: describeActor(guard.ctx),
+		outcome: result.success ? 'success' : 'error',
+		database,
+		collection,
+		detail: result.success ? undefined : result.error,
+	});
+	if (!result.success) return result;
+	return success({ executed: true });
+};
 
 export const addDocuments = async (
 	database: string,

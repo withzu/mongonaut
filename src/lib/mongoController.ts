@@ -402,23 +402,32 @@ export class MongoController {
 		pipeline: Document[],
 		page: number,
 		pageSize: number,
-		isWritePipeline: boolean,
 	): Promise<ControllerResult<PaginatedDocuments>> {
 		return this.run('Could not run the aggregation', async () => {
-			const collection = this.client.db(dbName).collection(collectionName);
-
-			if (isWritePipeline) {
-				await collection.aggregate(pipeline, this.documentReadOptions).toArray();
-				return paginate([], 1, pageSize, 0);
-			}
-
-			const documents = await collection
+			const documents = await this.client
+				.db(dbName)
+				.collection(collectionName)
 				.aggregate(
 					[...pipeline, { $skip: (page - 1) * pageSize }, { $limit: pageSize + 1 }],
 					this.documentReadOptions,
 				)
 				.toArray();
 			return paginate(documents, page, pageSize, null);
+		});
+	}
+
+	public async runWritePipeline(
+		dbName: string,
+		collectionName: string,
+		pipeline: Document[],
+	): Promise<ControllerResult<undefined>> {
+		return this.run('Could not run the aggregation', async () => {
+			await this.client
+				.db(dbName)
+				.collection(collectionName)
+				.aggregate(pipeline, this.queryOptions)
+				.toArray();
+			return undefined;
 		});
 	}
 
