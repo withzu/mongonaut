@@ -53,6 +53,7 @@ const PIPELINE_PLACEHOLDER = `[
 ]`;
 
 const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
+const INTEGER_PATTERN = /^-?\d+$/;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?Z?)?$/;
 
 function coerce(raw: string): unknown {
@@ -72,6 +73,12 @@ function coerce(raw: string): unknown {
 	}
 
 	const num = Number(trimmed);
+	// Number() rounds integers beyond 2^53, so a 64-bit id would never match.
+	// Sending the exact digits as a Long keeps them intact.
+	if (!Number.isSafeInteger(num) && INTEGER_PATTERN.test(trimmed)) {
+		const exact = BigInt(trimmed);
+		if (BigInt.asIntN(64, exact) === exact) return { $numberLong: exact.toString() };
+	}
 	if (trimmed !== '' && Number.isFinite(num)) return num;
 	return raw;
 }
