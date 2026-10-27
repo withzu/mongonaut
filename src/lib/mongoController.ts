@@ -58,17 +58,63 @@ export function validateCollectionName(name: string): string | null {
 	return null;
 }
 
+const DEFAULT_CONNECTION_URL = 'mongodb://localhost:27017';
+
 export class MongoController {
 	readonly client: MongoClient;
 	private connected: boolean = false;
+	private lastConnectionError: string | null = null;
+	private readonly target: string;
+	private readonly usesDefaultURL: boolean;
 	private readonly TIMEOUT = envInt('MONGONAUT_TIMEOUT', 5000, { min: 250 });
 	private readonly QUERY_TIMEOUT = envInt('MONGONAUT_QUERY_TIMEOUT', 15000, { min: 1000 });
 
 	constructor() {
-		this.client = new MongoClient(env('MONGO_CONNECTION_URL', 'mongodb://localhost:27017'), {
+		const configuredURL = env('MONGO_CONNECTION_URL', '').trim();
+		const url = configuredURL || DEFAULT_CONNECTION_URL;
+		this.usesDefaultURL = !configuredURL;
+		this.target = describeConnectionTarget(url);
+		this.client = new MongoClient(url, {
 			serverSelectionTimeoutMS: this.TIMEOUT,
 			connectTimeoutMS: this.TIMEOUT,
 		});
+	}
+
+	private connectionFailed(error: unknown): ControllerResult<never> {
+		this.connected = false;
+		const message = describeConnectionError(error);
+		this.reportConnectionFailure(message, error);
+		return { success: false, error: message };
+	}
+
+	// The readiness probe retries every few seconds, so only state changes are
+	// logged instead of one line per failed attempt.
+	private reportConnectionFailure(message: string, error: unknown) {
+		if (message === this.lastConnectionError) return;
+		this.lastConnectionError = message;
+
+		const lines = [`[mongonaut] could not connect to MongoDB at ${this.target}: ${message}`];
+		if (error instanceof Error && error.message && !message.includes(error.message)) {
+			lines.push(`  cause: ${error.message}`);
+		}
+		if (this.usesDefaultURL) {
+			lines.push(
+				`  MONGO_CONNECTION_URL is not set, falling back to ${DEFAULT_CONNECTION_URL}. Set it to your MongoDB connection string.`,
+			);
+		} else {
+			lines.push(
+				'  Check MONGO_CONNECTION_URL and make sure the MongoDB host is reachable from Mongonaut.',
+			);
+		}
+		console.error(lines.join('\n'));
+	}
+
+	private reportConnected() {
+		const recovered = this.lastConnectionError !== null;
+		this.lastConnectionError = null;
+		console.log(
+			`[mongonaut] ${recovered ? 'reconnected' : 'connected'} to MongoDB at ${this.target}`,
+		);
 	}
 
 	private get queryOptions() {
@@ -94,10 +140,10 @@ export class MongoController {
 				}),
 			]);
 			this.connected = true;
+			this.reportConnected();
 			return ok(undefined);
 		} catch (error) {
-			this.connected = false;
-			return { success: false, error: describeConnectionError(error) };
+			return this.connectionFailed(error);
 		} finally {
 			if (timer) clearTimeout(timer);
 		}
@@ -112,10 +158,7 @@ export class MongoController {
 		try {
 			return ok(await operation());
 		} catch (error) {
-			if (isConnectionError(error)) {
-				this.connected = false;
-				return { success: false, error: describeConnectionError(error) };
-			}
+			if (isConnectionError(error)) return this.connectionFailed(error);
 			return fail(error, fallback);
 		}
 	}
@@ -538,11 +581,19 @@ function describeConnectionError(error: unknown): string {
 	return 'Could not connect to MongoDB';
 }
 
-let sharedController: MongoController | null = null;
+/** Scheme and hosts of a connection string, without credentials or options. */
+function describeConnectionTarget(url: string): string {
+	const match = /^([a-z0-9+.-]+:\/\/)(?:[^/?]*@)?([^/?]*)/i.exec(url);
+	return match ? `${match[1]}${match[2]}` : '<unparseable connection URL>';
+}
+
+// Kept on globalThis so the startup check in instrumentation.ts and the route
+// handlers share one client, even when they end up in separate module graphs.
+const globalForMongo = globalThis as typeof globalThis & {
+	mongonautController?: MongoController;
+};
 
 export function getMongoController(): MongoController {
-	if (!sharedController) {
-		sharedController = new MongoController();
-	}
-	return sharedController;
+	globalForMongo.mongonautController ??= new MongoController();
+	return globalForMongo.mongonautController;
 }
