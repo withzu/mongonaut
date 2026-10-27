@@ -1,6 +1,6 @@
 'use server';
 
-import { BSON, type Document, type Filter, type IndexSpecification, type Sort } from 'mongodb';
+import { type Document, type Filter, type IndexSpecification, type Sort } from 'mongodb';
 
 import {
 	getMongoController,
@@ -32,13 +32,12 @@ import { findServerJsOperators } from '@/lib/mongo/pipeline';
 import {
 	documentRevision,
 	parseDocumentId,
+	parseDocumentJson,
 	parseDocumentJsonArray,
 	parseDocumentJsonObject,
 	stringifyDocumentId,
 	stringifyDocumentJson,
 } from '@/lib/mongo/document-json';
-
-const { EJSON } = BSON;
 
 const mongo = getMongoController();
 
@@ -258,8 +257,8 @@ function resolveMode(query: DocumentQuery): 'browse' | 'find' | 'aggregate' {
 
 function parseFilterAndSort(query: DocumentQuery): { filter: Filter<Document>; sort: Sort } {
 	return {
-		filter: query.filter ? (EJSON.parse(query.filter, { relaxed: false }) as Filter<Document>) : {},
-		sort: query.sort ? (EJSON.parse(query.sort, { relaxed: false }) as Sort) : {},
+		filter: query.filter ? (parseDocumentJson(query.filter) as Filter<Document>) : {},
+		sort: query.sort ? (parseDocumentJson(query.sort) as Sort) : {},
 	};
 }
 
@@ -284,7 +283,7 @@ export const loadDocuments = async (
 	if (mode === 'aggregate') {
 		let pipeline: Document[];
 		try {
-			const parsed = EJSON.parse(input.pipeline as string, { relaxed: false });
+			const parsed = parseDocumentJson(input.pipeline as string);
 			if (!Array.isArray(parsed)) throw new Error('Aggregation pipeline must be a JSON array');
 			pipeline = parsed as Document[];
 		} catch (error) {
@@ -378,7 +377,7 @@ export const exportCollection = async (
 	if (mode === 'aggregate') {
 		let pipeline: Document[];
 		try {
-			const parsed = EJSON.parse(query.pipeline as string, { relaxed: false });
+			const parsed = parseDocumentJson(query.pipeline as string);
 			if (!Array.isArray(parsed)) throw new Error('Aggregation pipeline must be a JSON array');
 			pipeline = parsed as Document[];
 		} catch (error) {

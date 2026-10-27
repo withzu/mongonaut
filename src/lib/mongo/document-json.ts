@@ -4,6 +4,7 @@ import { BSON, type Document } from 'mongodb';
 const { EJSON } = BSON;
 
 const MAX_ISO_MILLIS = 253402300799999;
+const INTEGER_LITERAL = /^-?\d+$/;
 
 function simplify(value: unknown): unknown {
 	if (Array.isArray(value)) return value.map(simplify);
@@ -47,8 +48,27 @@ export function stringifyDocumentJson(value: unknown, space: number = 0): string
 	return JSON.stringify(simplify(serialized.value), null, space);
 }
 
+/**
+ * JSON.parse rounds integers beyond 2^53 to the nearest double before EJSON
+ * ever sees them, so a 64-bit value typed as a plain number would be stored
+ * with different digits. The reviver reads the original literal and keeps it
+ * as an exact Long instead.
+ */
+function preserveLargeIntegers(
+	_key: string,
+	value: unknown,
+	context?: { source?: string },
+): unknown {
+	if (typeof value !== 'number' || Number.isSafeInteger(value)) return value;
+	const source = context?.source;
+	if (!source || !INTEGER_LITERAL.test(source)) return value;
+	const exact = BigInt(source);
+	if (BigInt.asIntN(64, exact) !== exact) return value;
+	return { $numberLong: exact.toString() };
+}
+
 export function parseDocumentJson(text: string): unknown {
-	return EJSON.parse(text, { relaxed: false });
+	return EJSON.deserialize(JSON.parse(text, preserveLargeIntegers), { relaxed: false });
 }
 
 export function parseDocumentJsonObject(text: string): Document {

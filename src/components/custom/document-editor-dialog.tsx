@@ -151,7 +151,9 @@ export function DocumentEditorDialog({
 					<code className="bg-muted rounded px-1 py-0.5 font-mono">{'{ "$oid": "…" }'}</code> for an
 					ObjectId,{' '}
 					<code className="bg-muted rounded px-1 py-0.5 font-mono">{'{ "$date": "…" }'}</code> for a
-					date.
+					date,{' '}
+					<code className="bg-muted rounded px-1 py-0.5 font-mono">{'{ "$numberLong": "…" }'}</code>{' '}
+					for a 64-bit integer.
 				</p>
 
 				<div className="h-[500px] border rounded-md overflow-hidden">
