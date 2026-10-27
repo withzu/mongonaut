@@ -16,6 +16,7 @@ carried no written notes.
 * OCI image labels, so `docker inspect` identifies source, documentation, vendor and license on any image, including one built locally.
 * Published images now carry a software bill of materials and a full provenance attestation.
 * Release images are additionally published to Docker Hub as `thezucompany/mongonaut`.
+* Mongonaut tells administrators when a newer release is available, with a small dot on the About icon and a link to the release notes on the About page. The server checks GitHub at most every six hours.
 
 ### Changed
 

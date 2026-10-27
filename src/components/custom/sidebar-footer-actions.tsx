@@ -6,8 +6,10 @@ import { InfoIcon, KeyRoundIcon, LogOutIcon, MoonIcon, SettingsIcon, SunIcon } f
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { ChangePasswordDialog } from '@/components/custom/change-password-dialog';
+import { getAvailableUpdate } from '@/actions/updateCheck';
 import { usePreferredTheme } from '@/hooks/use-preferred-theme';
 import { fetchAuthMe, type AuthMeResponse } from '@/lib/auth/me-client';
+import type { AvailableUpdate } from '@/lib/update-check';
 import { cn } from '@/lib/utils';
 
 export function ThemeToggle({ className }: { className?: string }) {
@@ -72,12 +74,18 @@ export function SidebarFooterActions({
 }) {
 	const [auth, setAuth] = useState<AuthMeResponse | null>(null);
 	const [showChangePassword, setShowChangePassword] = useState(false);
+	const [update, setUpdate] = useState<AvailableUpdate | null>(null);
 
 	useEffect(() => {
 		let cancelled = false;
 		void fetchAuthMe().then(data => {
 			if (!cancelled) setAuth(data);
 		});
+		void getAvailableUpdate()
+			.then(data => {
+				if (!cancelled) setUpdate(data);
+			})
+			.catch(() => {});
 		return () => {
 			cancelled = true;
 		};
@@ -120,9 +128,24 @@ export function SidebarFooterActions({
 					</Button>
 				)}
 
-				<Button size="icon" variant="ghost" aria-label="About Mongonaut" asChild>
+				<Button
+					size="icon"
+					variant="ghost"
+					aria-label={
+						update ? `About Mongonaut, version ${update.version} is available` : 'About Mongonaut'
+					}
+					title={update ? `Mongonaut ${update.version} is available` : undefined}
+					className="relative"
+					asChild
+				>
 					<Link href="/about" prefetch={false}>
 						<InfoIcon size={18} />
+						{update && (
+							<span
+								aria-hidden="true"
+								className="bg-brand ring-sidebar absolute top-1.5 right-1.5 size-1.5 rounded-full ring-2"
+							/>
+						)}
 					</Link>
 				</Button>
 
