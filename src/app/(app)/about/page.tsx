@@ -1,6 +1,8 @@
+import { Suspense } from 'react';
 import { BookOpen, Code, Star, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { getAvailableUpdate } from '@/actions/updateCheck';
 import { AppContainer } from '@/components/custom/app-container';
 import { GithubIcon } from '@/components/custom/github-icon';
 import { Badge } from '@/components/ui/badge';
@@ -66,6 +68,22 @@ function ResourceButton({ link }: { link: ResourceLink }) {
 	);
 }
 
+async function UpdateNotice() {
+	const update = await getAvailableUpdate();
+	if (!update) return null;
+
+	return (
+		<Link
+			href={update.url}
+			target="_blank"
+			rel="noreferrer noopener"
+			className="text-brand text-sm tabular-nums underline-offset-4 hover:underline"
+		>
+			Version {update.version} available
+		</Link>
+	);
+}
+
 export default function AboutPage() {
 	return (
 		<AppContainer>
@@ -86,6 +104,9 @@ export default function AboutPage() {
 								<div className="flex items-center gap-2 mt-1">
 									<Badge variant="secondary">v{getAppVersion()}</Badge>
 									<span className="text-sm text-muted-foreground">Beta Release</span>
+									<Suspense fallback={null}>
+										<UpdateNotice />
+									</Suspense>
 								</div>
 							</div>
 						</div>

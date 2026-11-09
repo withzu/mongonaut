@@ -16,6 +16,7 @@ carried no written notes.
 * OCI image labels, so `docker inspect` identifies source, documentation, vendor and license on any image, including one built locally.
 * Published images now carry a software bill of materials and a full provenance attestation.
 * Release images are additionally published to Docker Hub as `thezucompany/mongonaut`.
+* Mongonaut tells administrators when a newer release is available, with a small dot on the About icon and a link to the release notes on the About page. The server checks GitHub at most every six hours.
 
 ### Changed
 
@@ -32,6 +33,10 @@ carried no written notes.
 * A filtered query no longer fails because the exact document count exceeds the query budget. The count falls back to unknown and the matching documents are still returned.
 * The release workflow no longer aborts when the release commit already contains the version bump. That failure left 0.1.7 tagged on GitHub without a published container image.
 * A prerelease tag no longer moves the `latest` image tag.
+
+### Security
+
+* An aggregation pipeline with `$out` or `$merge` no longer runs when a collection page is opened. Previously such a pipeline in the page URL executed on every page load, so a crafted link opened by a signed-in user could overwrite collections with that user's rights, and a reload ran the write again. Writing pipelines now only run when "Run aggregation" is pressed. A link that contains one shows a notice instead.
 
 ## [0.1.7] 2026-09-16
 

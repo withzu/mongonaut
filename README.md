@@ -332,8 +332,11 @@ For stronger protection, use a dedicated MongoDB account with only the required 
 | `MONGONAUT_READONLY` | Disables write operations when set to `true` | `false` |
 | `MONGONAUT_TIMEOUT` | MongoDB connection and server selection timeout in milliseconds | `5000` |
 | `MONGONAUT_QUERY_TIMEOUT` | Upper bound for a single query or pipeline in milliseconds | `15000` |
+| `MONGONAUT_UPDATE_CHECK` | Checks GitHub for a newer release and shows a small hint to administrators | `true` |
 
 Set `MONGO_CONNECTION_URL` explicitly when running Mongonaut in a container. The fallback address points to the Mongonaut container itself.
+
+The update check runs on the server at most every six hours and only contacts `api.github.com`. It sends no data about your databases, only the running version in the User-Agent. When a newer release exists, the About icon in the sidebar shows a small dot and the About page links to the release notes. Without internet access the check fails silently. Set `MONGONAUT_UPDATE_CHECK=false` to turn it off.
 
 ### Limits
 
