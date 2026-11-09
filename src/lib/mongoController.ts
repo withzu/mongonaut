@@ -29,6 +29,8 @@ export interface CollectionSummary {
 
 export type { IndexSummary };
 
+const collectionNameCollator = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
+
 function ok<T>(data: T): ControllerResult<T> {
 	return { success: true, data };
 }
@@ -193,7 +195,9 @@ export class MongoController {
 	): Promise<ControllerResult<CollectionSummary[]>> {
 		return this.run('Could not list collections', async () => {
 			const collections = await this.client.db(name).listCollections().toArray();
-			return collections.map(entry => ({ name: entry.name, type: entry.type }));
+			return collections
+				.map(entry => ({ name: entry.name, type: entry.type }))
+				.sort((a, b) => collectionNameCollator.compare(a.name, b.name));
 		});
 	}
 
