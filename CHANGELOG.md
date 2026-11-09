@@ -22,7 +22,7 @@ carried no written notes.
 * The container health check now uses `/api/ready` instead of `/api/health`, so a container no longer reports healthy while MongoDB is unreachable. `/api/health` stays a pure liveness probe and does not touch the database.
 * `package.json` carries description, repository, homepage, bugs, keywords and a Node.js engine constraint.
 * `react-scan` moved from runtime to development dependencies. It was already excluded from production behaviour.
-* Collections in the sidebar are sorted alphabetically and case-insensitively, instead of appearing in the order MongoDB returns them ([#132](https://github.com/withzu/mongonaut/issues/132)).
+* Databases and collections in the sidebar are sorted alphabetically and case-insensitively, instead of appearing in the order MongoDB returns them ([#132](https://github.com/withzu/mongonaut/issues/132)).
 
 ### Fixed
 

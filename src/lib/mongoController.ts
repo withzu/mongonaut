@@ -29,7 +29,7 @@ export interface CollectionSummary {
 
 export type { IndexSummary };
 
-const collectionNameCollator = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
+const nameCollator = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
 
 function ok<T>(data: T): ControllerResult<T> {
 	return { success: true, data };
@@ -178,7 +178,10 @@ export class MongoController {
 	> {
 		return this.run('Could not list databases', async () => {
 			const result = await this.client.db().admin().listDatabases();
-			return { databases: result.databases ?? [] };
+			const databases = (result.databases ?? []).sort((a, b) =>
+				nameCollator.compare(a.name, b.name),
+			);
+			return { databases };
 		});
 	}
 
@@ -197,7 +200,7 @@ export class MongoController {
 			const collections = await this.client.db(name).listCollections().toArray();
 			return collections
 				.map(entry => ({ name: entry.name, type: entry.type }))
-				.sort((a, b) => collectionNameCollator.compare(a.name, b.name));
+				.sort((a, b) => nameCollator.compare(a.name, b.name));
 		});
 	}
 
