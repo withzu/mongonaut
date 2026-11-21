@@ -20,6 +20,7 @@ import {
 	verifyRecovery,
 } from '@/lib/auth/accounts';
 import { validatePassword } from '@/lib/auth/policy';
+import { CROSS_SITE_ERROR, isSameOriginRequest } from '@/lib/auth/origin';
 import { audit } from '@/lib/mongo/audit';
 
 export const runtime = 'nodejs';
@@ -30,6 +31,9 @@ interface Body {
 }
 
 export async function POST(req: NextRequest) {
+	if (!isSameOriginRequest(req)) {
+		return NextResponse.json({ ok: false, error: CROSS_SITE_ERROR }, { status: 403 });
+	}
 	const cfg = getAuthConfig();
 	if (cfg.mode !== 'ACCOUNT' || !cfg.secret) {
 		return NextResponse.json({ ok: false, error: 'Account mode is not enabled' }, { status: 400 });

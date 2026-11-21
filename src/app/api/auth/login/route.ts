@@ -20,6 +20,7 @@ import {
 	verifyRecovery,
 } from '@/lib/auth/accounts';
 import { safeInternalPath } from '@/lib/auth/redirect';
+import { CROSS_SITE_ERROR, isSameOriginRequest } from '@/lib/auth/origin';
 import { audit } from '@/lib/mongo/audit';
 
 export const runtime = 'nodejs';
@@ -86,6 +87,9 @@ function successResponse(req: NextRequest, token: string, next: string, ttlSecon
 }
 
 export async function POST(req: NextRequest) {
+	if (!isSameOriginRequest(req)) {
+		return NextResponse.json({ ok: false, error: CROSS_SITE_ERROR }, { status: 403 });
+	}
 	const cfg = getAuthConfig();
 
 	if (cfg.mode !== 'STATIC_PASSWORD' && cfg.mode !== 'ACCOUNT') {

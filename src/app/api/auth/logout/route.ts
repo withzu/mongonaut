@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OIDC_FLOW_COOKIE, REDIRECT_COOKIE, SESSION_COOKIE } from '@/lib/auth/session';
 import { getPublicBaseURL } from '@/lib/auth/config';
+import { CROSS_SITE_ERROR, isSameOriginRequest } from '@/lib/auth/origin';
 
 export const runtime = 'nodejs';
 
@@ -12,9 +13,13 @@ function clearAuthCookies(res: NextResponse) {
 
 /**
  * POST only. A GET logout could be triggered from any third party page, for
- * example through an image tag, and would sign the user out unasked.
+ * example through an image tag, and would sign the user out unasked. The same
+ * origin check stops a cross site form from doing the same with a POST.
  */
 export async function POST(req: NextRequest) {
+	if (!isSameOriginRequest(req)) {
+		return new NextResponse(CROSS_SITE_ERROR, { status: 403 });
+	}
 	const url = new URL(getPublicBaseURL(req.url));
 	const target = new URL('/login', url);
 	const res = NextResponse.redirect(target, { status: 303 });
