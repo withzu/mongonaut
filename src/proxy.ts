@@ -28,7 +28,7 @@ export async function proxy(req: NextRequest) {
 	}
 
 	const token = req.cookies.get(SESSION_COOKIE)?.value;
-	const session = await readSessionToken(cfg.secret, token, cfg.mode);
+	const session = await readSessionToken(cfg, token);
 	if (session) {
 		return NextResponse.next();
 	}

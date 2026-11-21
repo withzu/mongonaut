@@ -1,4 +1,4 @@
-import { AuthMode, getPublicBaseURL } from '@/lib/auth/config';
+import { AuthConfig, AuthMode, getPublicBaseURL } from '@/lib/auth/config';
 
 export const SESSION_COOKIE = 'mongonaut_session';
 export const OIDC_FLOW_COOKIE = 'mongonaut_oidc_flow';
@@ -17,6 +17,8 @@ export interface SessionPayload {
 	name?: string;
 	ver?: number;
 	recovery?: boolean;
+	/** Fingerprint of the credential configuration the session was issued under. */
+	bind?: string;
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -80,13 +82,41 @@ export async function verifyPayload<T>(secret: string, token: string): Promise<T
 	}
 }
 
+/**
+ * Ties STATIC_PASSWORD and OIDC sessions to the configuration that issued them,
+ * so rotating the shared password or pointing at another identity provider or
+ * client ends every existing session. ACCOUNT sessions use tokenVersion instead.
+ * The value is keyed with the auth secret, so the cookie reveals nothing about
+ * the password.
+ */
+async function sessionBinding(cfg: AuthConfig, mode: AuthMode): Promise<string | null> {
+	if (!cfg.secret) return null;
+	if (mode === 'STATIC_PASSWORD' && cfg.staticPassword) {
+		return hmacSign(cfg.secret, `session-bind:static-password:${cfg.staticPassword}`);
+	}
+	if (mode === 'OIDC' && cfg.oidc) {
+		return hmacSign(cfg.secret, `session-bind:oidc:${cfg.oidc.issuer}\n${cfg.oidc.clientId}`);
+	}
+	return null;
+}
+
+// The allowlist is checked on every request, not only at login, so removing an
+// address from MONGONAUT_OIDC_ALLOWED_EMAILS ends that user's session at once.
+function oidcEmailStillAllowed(cfg: AuthConfig, email: string | undefined): boolean {
+	const allowed = cfg.oidc?.allowedEmails;
+	if (!allowed || allowed.length === 0) return true;
+	return typeof email === 'string' && allowed.includes(email.toLowerCase());
+}
+
 export async function createSessionToken(
-	secret: string,
+	cfg: AuthConfig,
 	mode: AuthMode,
 	subject: string,
 	ttlSeconds: number,
 	extra?: { email?: string; name?: string; ver?: number; recovery?: boolean },
 ): Promise<{ token: string; payload: SessionPayload }> {
+	if (!cfg.secret) throw new Error('MONGONAUT_AUTH_SECRET is not configured');
+	const bind = await sessionBinding(cfg, mode);
 	const now = Math.floor(Date.now() / 1000);
 	const payload: SessionPayload = {
 		typ: SESSION_TOKEN_TYPE,
@@ -98,23 +128,35 @@ export async function createSessionToken(
 		...(extra?.name ? { name: extra.name } : {}),
 		...(typeof extra?.ver === 'number' ? { ver: extra.ver } : {}),
 		...(extra?.recovery ? { recovery: true } : {}),
+		...(bind ? { bind } : {}),
 	};
-	const token = await signPayload(secret, payload);
+	const token = await signPayload(cfg.secret, payload);
 	return { token, payload };
 }
 
+/**
+ * Returns the session only if it is a session token issued for the active auth
+ * mode and, for STATIC_PASSWORD and OIDC, for the current credential settings.
+ */
 export async function readSessionToken(
-	secret: string,
+	cfg: AuthConfig,
 	token: string | undefined,
-	mode: AuthMode,
 ): Promise<SessionPayload | null> {
-	if (!token) return null;
-	const payload = await verifyPayload<SessionPayload>(secret, token);
+	if (!token || !cfg.secret) return null;
+	const payload = await verifyPayload<SessionPayload>(cfg.secret, token);
 	if (!payload || typeof payload !== 'object') return null;
 	if (payload.typ !== SESSION_TOKEN_TYPE) return null;
-	if (payload.mode !== mode) return null;
+	if (payload.mode !== cfg.mode) return null;
 	if (typeof payload.sub !== 'string' || payload.sub === '') return null;
 	if (typeof payload.exp !== 'number' || payload.exp * 1000 < Date.now()) return null;
+
+	const expectedBind = await sessionBinding(cfg, cfg.mode);
+	if (expectedBind !== null) {
+		if (typeof payload.bind !== 'string' || !timingSafeEqual(payload.bind, expectedBind)) {
+			return null;
+		}
+	}
+	if (cfg.mode === 'OIDC' && !oidcEmailStillAllowed(cfg, payload.email)) return null;
 	return payload;
 }
 

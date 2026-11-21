@@ -13,11 +13,7 @@ export async function GET(req: NextRequest) {
 
 	if (cfg.mode === 'NONE' || !cfg.secret) return anonymous;
 
-	const session = await readSessionToken(
-		cfg.secret,
-		req.cookies.get(SESSION_COOKIE)?.value,
-		cfg.mode,
-	);
+	const session = await readSessionToken(cfg, req.cookies.get(SESSION_COOKIE)?.value);
 	if (!session) return anonymous;
 
 	// In account mode the token alone is not enough: the account may have been

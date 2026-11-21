@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
 		recordLoginSuccess(clientKey);
 		audit({ action: 'auth.login', actor: 'static-password', outcome: 'success' });
 		const { token } = await createSessionToken(
-			cfg.secret,
+			cfg,
 			'STATIC_PASSWORD',
 			'static-user',
 			cfg.sessionTtlSeconds,
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
 		detail: recovery ? 'recovery password' : undefined,
 	});
 	const { token } = await createSessionToken(
-		cfg.secret,
+		cfg,
 		'ACCOUNT',
 		account._id.toString(),
 		cfg.sessionTtlSeconds,

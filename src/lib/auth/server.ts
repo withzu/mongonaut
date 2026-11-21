@@ -53,7 +53,7 @@ export async function getSession(): Promise<SessionPayload | null> {
 	const cfg = getAuthConfig();
 	if (cfg.mode === 'NONE' || !cfg.secret) return null;
 	const token = (await cookies()).get(SESSION_COOKIE)?.value;
-	return readSessionToken(cfg.secret, token, cfg.mode);
+	return readSessionToken(cfg, token);
 }
 
 export async function getCurrentAccount(): Promise<AccountDoc | null> {

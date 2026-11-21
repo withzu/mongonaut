@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
 	}
 
 	const subject = claims.sub;
-	const { token } = await createSessionToken(cfg.secret, 'OIDC', subject, cfg.sessionTtlSeconds, {
+	const { token } = await createSessionToken(cfg, 'OIDC', subject, cfg.sessionTtlSeconds, {
 		email: claims.email,
 		name: claims.name || claims.preferred_username,
 	});

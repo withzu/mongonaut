@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
 	});
 
 	const { token } = await createSessionToken(
-		cfg.secret,
+		cfg,
 		'ACCOUNT',
 		account._id.toString(),
 		cfg.sessionTtlSeconds,
