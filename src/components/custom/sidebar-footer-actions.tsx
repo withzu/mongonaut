@@ -103,9 +103,9 @@ export function SidebarFooterActions({
 				aria-label="The Zu Company"
 				className="flex shrink-0 items-center opacity-80 transition-opacity hover:opacity-100"
 			>
-				{/* eslint-disable-next-line @next/next/no-img-element */}
+				{/* oxlint-disable-next-line nextjs/no-img-element */}
 				<img src="/images/zu/logo.svg" alt="The Zu Company" className="h-5 w-auto dark:hidden" />
-				{/* eslint-disable-next-line @next/next/no-img-element */}
+				{/* oxlint-disable-next-line nextjs/no-img-element */}
 				<img
 					src="/images/zu/logo-dark.svg"
 					alt="The Zu Company"

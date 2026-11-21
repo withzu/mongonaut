@@ -510,7 +510,7 @@ Open `http://localhost:3000`.
 | `pnpm dev` | Start the development server |
 | `pnpm build` | Create a production build |
 | `pnpm start` | Start the production server |
-| `pnpm lint` | Run ESLint |
+| `pnpm lint` | Run oxlint |
 | `pnpm typecheck` | Run the TypeScript compiler without emitting output |
 | `pnpm format` | Format supported source files with Prettier |
 | `pnpm test:format` | Check source formatting |
