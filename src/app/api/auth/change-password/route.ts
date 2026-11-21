@@ -35,7 +35,11 @@ export async function POST(req: NextRequest) {
 		return NextResponse.json({ ok: false, error: 'Account mode is not enabled' }, { status: 400 });
 	}
 
-	const session = await readSessionToken(cfg.secret, req.cookies.get(SESSION_COOKIE)?.value);
+	const session = await readSessionToken(
+		cfg.secret,
+		req.cookies.get(SESSION_COOKIE)?.value,
+		cfg.mode,
+	);
 	if (!session || session.mode !== 'ACCOUNT') {
 		return NextResponse.json({ ok: false, error: 'Not authenticated' }, { status: 401 });
 	}

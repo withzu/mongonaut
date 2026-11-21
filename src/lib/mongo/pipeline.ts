@@ -20,7 +20,8 @@ function namespaceRef(value: unknown): NamespaceRef | null {
 	if (value && typeof value === 'object') {
 		const record = value as Record<string, unknown>;
 		const collection = typeof record.coll === 'string' ? record.coll : undefined;
-		const database = typeof record.db === 'string' ? record.db : undefined;
+		const database =
+			record.db === undefined ? undefined : typeof record.db === 'string' ? record.db : '';
 		if (collection) return { collection, database };
 	}
 	return null;
@@ -32,7 +33,7 @@ class Collector {
 	readonly serverJs = new Set<string>();
 
 	private key(ref: NamespaceRef): string {
-		return `${ref.database ?? ''}.${ref.collection}`;
+		return JSON.stringify([ref.database ?? null, ref.collection]);
 	}
 
 	addRead(value: unknown): void {

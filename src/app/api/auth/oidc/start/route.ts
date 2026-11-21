@@ -4,6 +4,7 @@ import { buildAuthorizationUrl } from '@/lib/auth/oidc';
 import {
 	isSecureRequest,
 	OIDC_FLOW_COOKIE,
+	OIDC_FLOW_TOKEN_TYPE,
 	randomToken,
 	sha256Base64Url,
 	signPayload,
@@ -13,6 +14,7 @@ import { safeInternalPath } from '@/lib/auth/redirect';
 export const runtime = 'nodejs';
 
 interface OidcFlowState {
+	typ: typeof OIDC_FLOW_TOKEN_TYPE;
 	state: string;
 	nonce: string;
 	codeVerifier: string;
@@ -49,6 +51,7 @@ export async function GET(req: NextRequest) {
 	});
 
 	const flow: OidcFlowState = {
+		typ: OIDC_FLOW_TOKEN_TYPE,
 		state,
 		nonce,
 		codeVerifier,

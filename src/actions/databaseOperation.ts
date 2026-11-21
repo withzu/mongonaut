@@ -648,6 +648,7 @@ export const createDatabase = async (database: string): Promise<ActionResult> =>
 	const guard = await requireInstanceAdmin();
 	if (!guard.allowed) return failure(guard.error);
 
+	if (typeof database !== 'string') return failure('Invalid database name');
 	const invalid = validateDatabaseName(database);
 	if (invalid) return failure(invalid);
 	if (isHiddenDb(database) || database === INTERNAL_DB) return failure('Reserved database name');
@@ -773,6 +774,8 @@ export const dropDatabase = async (database: string): Promise<ActionResult> => {
 		});
 		return failure(guard.error);
 	}
+	// An empty name would make the driver drop the connection string's default database.
+	if (typeof database !== 'string' || database === '') return failure('Invalid database name');
 	if (isHiddenDb(database)) return failure('Reserved database name');
 
 	const result = await mongo.dropDatabase(database);

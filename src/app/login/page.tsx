@@ -29,7 +29,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 	if (cfg.secret) {
 		const cookieStore = await cookies();
 		const existing = cookieStore.get(SESSION_COOKIE)?.value;
-		const session = await readSessionToken(cfg.secret, existing);
+		const session = await readSessionToken(cfg.secret, existing, cfg.mode);
 		if (session) {
 			redirect(next);
 		}

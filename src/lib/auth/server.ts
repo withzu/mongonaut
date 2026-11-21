@@ -53,7 +53,7 @@ export async function getSession(): Promise<SessionPayload | null> {
 	const cfg = getAuthConfig();
 	if (cfg.mode === 'NONE' || !cfg.secret) return null;
 	const token = (await cookies()).get(SESSION_COOKIE)?.value;
-	return readSessionToken(cfg.secret, token);
+	return readSessionToken(cfg.secret, token, cfg.mode);
 }
 
 export async function getCurrentAccount(): Promise<AccountDoc | null> {
@@ -114,8 +114,15 @@ export interface AccessRequest {
 	write?: boolean;
 }
 
+function isValidName(value: unknown): value is string {
+	return typeof value === 'string' && value !== '';
+}
+
 export function accessAllowed(ctx: AccessContext, req: AccessRequest): boolean {
-	if (req.database && isHiddenDb(req.database)) return false;
+	if (req.database !== undefined) {
+		if (!isValidName(req.database) || isHiddenDb(req.database)) return false;
+	}
+	if (req.collection !== undefined && !isValidName(req.collection)) return false;
 	// Global read-only mode outranks every grant, in every auth mode.
 	if (req.write && isGlobalReadonly()) return false;
 
@@ -128,7 +135,7 @@ export function accessAllowed(ctx: AccessContext, req: AccessRequest): boolean {
 		case 'ACCOUNT': {
 			if (!ctx.account) return false;
 			if (ctx.account.isAdmin) return true;
-			if (!req.database) return true;
+			if (req.database === undefined) return true;
 			return grantAllows(ctx.account.grants, req.database, req.collection, !!req.write);
 		}
 		default:
@@ -136,7 +143,10 @@ export function accessAllowed(ctx: AccessContext, req: AccessRequest): boolean {
 	}
 }
 
+// Guards a database or collection operation. The database is mandatory here;
+// instance level checks go through requireAnyAccess or requireInstanceAdmin.
 export async function guardAccess(req: AccessRequest): Promise<GuardResult> {
+	if (!isValidName(req.database)) return { allowed: false, error: DENIED_MESSAGE };
 	const ctx = await getAccessContext();
 	// Checked before the grant lookup so the user sees the actual reason.
 	if (req.write && isGlobalReadonly()) return { allowed: false, error: READONLY_MESSAGE };
@@ -223,6 +233,9 @@ export async function guardAggregation(
 	collection: string,
 	pipeline: Document[],
 ): Promise<AggregationGuardResult> {
+	if (!isValidName(database) || !isValidName(collection)) {
+		return { allowed: false, error: DENIED_MESSAGE };
+	}
 	const ctx = await getAccessContext();
 
 	if (!accessAllowed(ctx, { database, collection, write: false })) {

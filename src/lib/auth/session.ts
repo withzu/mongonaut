@@ -4,7 +4,11 @@ export const SESSION_COOKIE = 'mongonaut_session';
 export const OIDC_FLOW_COOKIE = 'mongonaut_oidc_flow';
 export const REDIRECT_COOKIE = 'mongonaut_redirect';
 
+export const SESSION_TOKEN_TYPE = 'session';
+export const OIDC_FLOW_TOKEN_TYPE = 'oidc_flow';
+
 export interface SessionPayload {
+	typ: typeof SESSION_TOKEN_TYPE;
 	sub: string;
 	mode: AuthMode;
 	iat: number;
@@ -85,6 +89,7 @@ export async function createSessionToken(
 ): Promise<{ token: string; payload: SessionPayload }> {
 	const now = Math.floor(Date.now() / 1000);
 	const payload: SessionPayload = {
+		typ: SESSION_TOKEN_TYPE,
 		sub: subject,
 		mode,
 		iat: now,
@@ -101,10 +106,14 @@ export async function createSessionToken(
 export async function readSessionToken(
 	secret: string,
 	token: string | undefined,
+	mode: AuthMode,
 ): Promise<SessionPayload | null> {
 	if (!token) return null;
 	const payload = await verifyPayload<SessionPayload>(secret, token);
-	if (!payload) return null;
+	if (!payload || typeof payload !== 'object') return null;
+	if (payload.typ !== SESSION_TOKEN_TYPE) return null;
+	if (payload.mode !== mode) return null;
+	if (typeof payload.sub !== 'string' || payload.sub === '') return null;
 	if (typeof payload.exp !== 'number' || payload.exp * 1000 < Date.now()) return null;
 	return payload;
 }

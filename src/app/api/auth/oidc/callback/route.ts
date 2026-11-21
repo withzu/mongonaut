@@ -6,6 +6,7 @@ import {
 	createSessionToken,
 	isSecureRequest,
 	OIDC_FLOW_COOKIE,
+	OIDC_FLOW_TOKEN_TYPE,
 	SESSION_COOKIE,
 	verifyPayload,
 } from '@/lib/auth/session';
@@ -15,6 +16,7 @@ import { audit } from '@/lib/mongo/audit';
 export const runtime = 'nodejs';
 
 interface OidcFlowState {
+	typ: typeof OIDC_FLOW_TOKEN_TYPE;
 	state: string;
 	nonce: string;
 	codeVerifier: string;
@@ -52,10 +54,10 @@ export async function GET(req: NextRequest) {
 
 	const flowToken = req.cookies.get(OIDC_FLOW_COOKIE)?.value;
 	const flow = await verifyPayload<OidcFlowState>(cfg.secret, flowToken || '');
-	if (!flow) {
+	if (!flow || flow.typ !== OIDC_FLOW_TOKEN_TYPE) {
 		return loginErrorRedirect(req, 'state_missing');
 	}
-	if (flow.exp * 1000 < Date.now()) {
+	if (typeof flow.exp !== 'number' || flow.exp * 1000 < Date.now()) {
 		return loginErrorRedirect(req, 'state_expired');
 	}
 	if (flow.state !== state) {
