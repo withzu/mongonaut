@@ -300,6 +300,8 @@ Access can optionally be restricted to specific email addresses:
 MONGONAUT_OIDC_ALLOWED_EMAILS=alice@example.com,bob@example.com
 ```
 
+When the allowlist is set, the ID token must contain `email_verified: true` for the address. Sign in is refused when the claim is missing or false, so make sure your provider includes it (some providers, for example Microsoft Entra ID, omit it by default).
+
 Leave the allowlist empty to permit every identity successfully authenticated by the configured provider.
 
 ### Disabling Authentication

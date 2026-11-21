@@ -121,7 +121,7 @@ export async function exchangeCodeForTokens(
 export interface VerifiedIdToken extends JWTPayload {
 	sub: string;
 	email?: string;
-	email_verified?: boolean;
+	email_verified?: unknown;
 	name?: string;
 	preferred_username?: string;
 	nonce?: string;
@@ -157,10 +157,12 @@ export async function verifyIdToken(
 export function isEmailAllowed(
 	cfg: OidcConfig,
 	email: string | undefined,
-	emailVerified: boolean | undefined,
+	emailVerified: unknown,
 ): boolean {
 	if (!cfg.allowedEmails || cfg.allowedEmails.length === 0) return true;
-	if (!email) return false;
-	if (emailVerified === false) return false;
+	if (typeof email !== 'string' || !email) return false;
+	// Fail closed: a missing claim does not prove the address is verified.
+	// The string form is accepted because some providers encode it that way.
+	if (emailVerified !== true && emailVerified !== 'true') return false;
 	return cfg.allowedEmails.includes(email.toLowerCase());
 }
