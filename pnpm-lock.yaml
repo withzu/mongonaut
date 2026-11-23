@@ -232,6 +232,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      isbot:
+        specifier: ^5.2.3
+        version: 5.2.3
       jose:
         specifier: ^6.2.18
         version: 6.2.18
@@ -2388,6 +2391,10 @@ packages:
 
   is-unicode-supported@2.1.0:
     resolution: {integrity: sha512-mE00Gnza5EEB3Ds0HfMyllZzbBrmLOX3vfWoj9A9PEnTfratQ/BcaJOuMhnkhjXvb2+FkY3VuHqtAGpTPmglFQ==}
+    engines: {node: '>=18'}
+
+  isbot@5.2.3:
+    resolution: {integrity: sha512-e8gGz3VzAuImtTMnB5PqNRRWGAswObTc+X+X5a8PttKT78VSSFec98w9ZwUoy6jJdlvJkVdLiN+WMgA8TewoZg==}
     engines: {node: '>=18'}
 
   isexe@2.0.0:
@@ -4933,6 +4940,8 @@ snapshots:
   is-interactive@2.0.0: {}
 
   is-unicode-supported@2.1.0: {}
+
+  isbot@5.2.3: {}
 
   isexe@2.0.0: {}
 

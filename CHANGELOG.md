@@ -17,6 +17,8 @@ carried no written notes.
 * Published images now carry a software bill of materials and a full provenance attestation.
 * Release images are additionally published to Docker Hub as `thezucompany/mongonaut`.
 * Mongonaut tells administrators when a newer release is available, with a small dot on the About icon and a link to the release notes on the About page. The server checks GitHub at most every six hours.
+* Crawlers, scanners and command line clients are refused with `403` before they reach any page, recognised through their User-Agent. Set `MONGONAUT_BLOCK_BOTS=false` to allow them, for example for scripts. Health and readiness endpoints are not affected.
+* Every page carries a `noindex, nofollow` robots meta tag in addition to the `X-Robots-Tag` header.
 
 ### Changed
 

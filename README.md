@@ -335,10 +335,13 @@ For stronger protection, use a dedicated MongoDB account with only the required 
 | `MONGONAUT_TIMEOUT` | MongoDB connection and server selection timeout in milliseconds | `5000` |
 | `MONGONAUT_QUERY_TIMEOUT` | Upper bound for a single query or pipeline in milliseconds | `15000` |
 | `MONGONAUT_UPDATE_CHECK` | Checks GitHub for a newer release and shows a small hint to administrators | `true` |
+| `MONGONAUT_BLOCK_BOTS` | Answers crawlers, scanners and HTTP clients without a browser User-Agent with `403` | `true` |
 
 Set `MONGO_CONNECTION_URL` explicitly when running Mongonaut in a container. The fallback address points to the Mongonaut container itself.
 
 The update check runs on the server at most every six hours and only contacts `api.github.com`. It sends no data about your databases, only the running version in the User-Agent. When a newer release exists, the About icon in the sidebar shows a small dot and the About page links to the release notes. Without internet access the check fails silently. Set `MONGONAUT_UPDATE_CHECK=false` to turn it off.
+
+Mongonaut keeps itself out of search engines. Every response carries `X-Robots-Tag: noindex`, every page has a matching robots meta tag, and with `MONGONAUT_BLOCK_BOTS` enabled, requests whose User-Agent identifies a crawler, scanner or command line client such as `curl` are refused with `403`. Requests without a User-Agent are refused as well. `/api/health`, `/api/ready` and `/robots.txt` stay reachable for probes. Set `MONGONAUT_BLOCK_BOTS=false` if you call Mongonaut from scripts.
 
 ### Limits
 

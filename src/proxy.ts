@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthConfig, getPublicBaseURL } from '@/lib/auth/config';
 import { readSessionToken, SESSION_COOKIE } from '@/lib/auth/session';
+import { isBotBlockingEnabled, ROBOTS_DIRECTIVES, shouldBlockAsBot } from '@/lib/bots';
 
 const PUBLIC_PREFIXES = ['/login', '/setup', '/api/auth/'];
 const PUBLIC_FILES = ['/favicon.ico', '/robots.txt', '/api/health', '/api/ready'];
@@ -16,12 +17,23 @@ function isPublic(pathname: string): boolean {
 }
 
 export async function proxy(req: NextRequest) {
+	const { pathname, search } = req.nextUrl;
+
+	if (isBotBlockingEnabled() && shouldBlockAsBot(pathname, req.headers.get('user-agent'))) {
+		return new NextResponse('Forbidden', {
+			status: 403,
+			headers: {
+				'Content-Type': 'text/plain; charset=utf-8',
+				'Cache-Control': 'no-store',
+				'X-Robots-Tag': ROBOTS_DIRECTIVES,
+			},
+		});
+	}
+
 	const cfg = getAuthConfig();
 	if (cfg.mode === 'NONE' || !cfg.secret) {
 		return NextResponse.next();
 	}
-
-	const { pathname, search } = req.nextUrl;
 
 	if (isPublic(pathname)) {
 		return NextResponse.next();
