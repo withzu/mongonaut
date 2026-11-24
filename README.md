@@ -22,7 +22,7 @@
   <a href="https://github.com/withzu/mongonaut/issues">Issues</a>
 </p>
 
-<p align="center">Å
+<p align="center">
   <a href="https://github.com/withzu/mongonaut/releases">
     <img alt="Latest release" src="https://img.shields.io/github/v/release/withzu/mongonaut?display_name=tag" />
   </a>
