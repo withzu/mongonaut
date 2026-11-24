@@ -9,6 +9,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { ShortcutTooltip } from '@/components/custom/shortcut-tooltip';
+import { useShortcut } from '@/hooks/use-shortcut';
 import { formatCount } from '@/lib/utils';
 
 const PAGE_SIZES = [10, 20, 50, 100, 200];
@@ -50,11 +52,18 @@ export function PaginationControls({
 		router.push(qs ? `${pathname}?${qs}` : pathname);
 	};
 
+	const canGoBack = currentPage > 1;
+	const goBack = () => push({ page: String(currentPage - 1) });
+	const goForward = () => push({ page: String(currentPage + 1) });
+
+	useShortcut('previous-page', goBack, canGoBack);
+	useShortcut('next-page', goForward, hasMore);
+
 	const from = shownCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
 	const to = shownCount === 0 ? 0 : from + shownCount - 1;
 
 	return (
-		<nav aria-label="Pagination" className="flex flex-wrap items-center justify-between gap-3 mt-4">
+		<nav aria-label="Pagination" className="flex flex-wrap items-center justify-between gap-3">
 			<div className="text-sm text-muted-foreground" aria-live="polite">
 				{shownCount === 0
 					? 'No documents'
@@ -88,21 +97,17 @@ export function PaginationControls({
 				</div>
 
 				<div className="flex gap-2">
-					<Button
-						variant="outline"
-						disabled={currentPage <= 1}
-						onClick={() => push({ page: String(currentPage - 1) })}
-					>
-						Previous
-					</Button>
+					<ShortcutTooltip id="previous-page">
+						<Button variant="outline" disabled={!canGoBack} onClick={goBack}>
+							Previous
+						</Button>
+					</ShortcutTooltip>
 
-					<Button
-						variant="outline"
-						disabled={!hasMore}
-						onClick={() => push({ page: String(currentPage + 1) })}
-					>
-						Next
-					</Button>
+					<ShortcutTooltip id="next-page">
+						<Button variant="outline" disabled={!hasMore} onClick={goForward}>
+							Next
+						</Button>
+					</ShortcutTooltip>
 				</div>
 			</div>
 		</nav>

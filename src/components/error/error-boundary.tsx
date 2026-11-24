@@ -12,14 +12,10 @@ interface Props {
 
 interface State {
 	error: Error | null;
-	errorInfo: React.ErrorInfo | null;
 }
 
 export class GlobalErrorBoundary extends React.Component<Props, State> {
-	constructor(props: Props) {
-		super(props);
-		this.state = { error: null, errorInfo: null };
-	}
+	state: State = { error: null };
 
 	static getDerivedStateFromError(error: Error) {
 		return { error };
@@ -27,10 +23,6 @@ export class GlobalErrorBoundary extends React.Component<Props, State> {
 
 	componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
 		console.error('Error caught by boundary:', error, errorInfo);
-		this.setState({
-			error: error,
-			errorInfo: errorInfo,
-		});
 	}
 
 	private isConnectionError(error: Error): boolean {
@@ -46,10 +38,10 @@ export class GlobalErrorBoundary extends React.Component<Props, State> {
 		if (this.state.error) {
 			return (
 				<div className="flex-1 flex items-center justify-center min-h-screen">
-					<Card className="w-md mx-auto border-destructive/50">
+					<Card className="w-md mx-auto">
 						<CardHeader>
 							<div className="flex items-center gap-2">
-								<AlertCircle className="h-5 w-5 text-destructive" />
+								<AlertCircle className="text-danger-mark size-5" />
 								<CardTitle>
 									{this.isConnectionError(this.state.error)
 										? 'Connection Error'
@@ -59,14 +51,14 @@ export class GlobalErrorBoundary extends React.Component<Props, State> {
 							<CardDescription>
 								{this.isConnectionError(this.state.error)
 									? 'Could not connect to the database'
-									: this.state.error.message}
+									: 'This page could not be shown'}
 							</CardDescription>
 						</CardHeader>
 						<CardContent className="space-y-4">
 							{this.isConnectionError(this.state.error) ? (
-								<div className="text-sm text-muted-foreground">
+								<div className="text-muted-foreground text-sm leading-paragraph">
 									<p>Please check:</p>
-									<ul className="list-disc list-inside mt-2 space-y-1">
+									<ul className="mt-2 list-disc space-y-1 pl-5">
 										<li>MongoDB is running on your system</li>
 										<li>The connection credentials are correct</li>
 										<li>MongoDB is running on the expected port</li>
@@ -74,7 +66,7 @@ export class GlobalErrorBoundary extends React.Component<Props, State> {
 									</ul>
 								</div>
 							) : (
-								<Card className="bg-muted/50">
+								<Card className="bg-background rounded-md py-0">
 									<CardContent className="p-3">
 										<code className="text-xs text-muted-foreground font-mono break-all">
 											{this.state.error.message}
@@ -83,12 +75,8 @@ export class GlobalErrorBoundary extends React.Component<Props, State> {
 								</Card>
 							)}
 
-							<Button
-								variant="default"
-								className="w-full cursor-pointer"
-								onClick={() => window.location.reload()}
-							>
-								<RefreshCw className="mr-2 h-4 w-4" />
+							<Button variant="default" className="w-full" onClick={() => window.location.reload()}>
+								<RefreshCw className="size-4" />
 								Try again
 							</Button>
 						</CardContent>

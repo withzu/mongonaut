@@ -1,0 +1,299 @@
+/*
+  Design tokens, in two tiers.
+
+  1. Ramps  raw color steps. Only this file may reference them.
+  2. Roles  what a color is for. Everything else uses roles.
+
+  A ramp step keeps its position in both themes, a role picks the step that fits
+  the theme. To change the accent, replace the --mgn-brand-* ramp and --mgn-on-brand.
+  The rules behind each role are documented in DESIGN.md.
+*/
+
+:root {
+	color-scheme: light;
+
+	/* Ramps */
+	--mgn-neutral-1: #000000;
+	--mgn-neutral-2: #27282e;
+	--mgn-neutral-3: #383a42;
+	--mgn-neutral-4: #494b57;
+	--mgn-neutral-5: #5a5d6b;
+	--mgn-neutral-6: #6c707e;
+	--mgn-neutral-7: #818594;
+	--mgn-neutral-8: #a8adbd;
+	--mgn-neutral-9: #c9ccd6;
+	--mgn-neutral-10: #d3d5db;
+	--mgn-neutral-11: #dfe1e5;
+	--mgn-neutral-12: #ebecf0;
+	--mgn-neutral-13: #f7f8fa;
+	--mgn-neutral-14: #ffffff;
+
+	--mgn-brand-1: #6a0f7c;
+	--mgn-brand-2: #7d1292;
+	--mgn-brand-3: #9716b0;
+	--mgn-brand-4: #b01bcc;
+	--mgn-brand-5: #c725e5;
+	--mgn-brand-6: #e291f0;
+	--mgn-brand-7: #f4d6f9;
+	--mgn-brand-8: #f9e9fb;
+	--mgn-brand-9: #faeefc;
+	--mgn-brand-10: #fdf7fe;
+
+	--mgn-danger-1: #ad2b38;
+	--mgn-danger-2: #bc303e;
+	--mgn-danger-3: #cc3645;
+	--mgn-danger-4: #db3b4b;
+	--mgn-danger-9: #fad4d8;
+	--mgn-danger-11: #fff7f7;
+
+	--mgn-success-2: #1f7536;
+	--mgn-success-4: #208a3c;
+	--mgn-success-9: #c5e5cc;
+	--mgn-success-11: #f2fcf3;
+
+	--mgn-warning-3: #c27d04;
+	--mgn-warning-6: #fed277;
+	--mgn-warning-10: #fffaeb;
+
+	/* Surfaces */
+	--mgn-surface-content: var(--mgn-neutral-14);
+	--mgn-surface-chrome: var(--mgn-neutral-13);
+	--mgn-surface-popup: var(--mgn-neutral-14);
+	--mgn-surface-inverse: var(--mgn-neutral-2);
+	--mgn-on-inverse: var(--mgn-neutral-14);
+	--mgn-on-inverse-success: #73bd79;
+	--mgn-on-inverse-danger: #e37774;
+	--mgn-scrim: rgb(0 0 0 / 0.4);
+
+	/* Lines */
+	--mgn-separator: var(--mgn-neutral-12);
+	--mgn-separator-region: var(--mgn-neutral-12);
+	--mgn-popup-border: var(--mgn-neutral-9);
+
+	/* Text */
+	--mgn-text: var(--mgn-neutral-1);
+	--mgn-text-secondary: var(--mgn-neutral-6);
+	--mgn-text-disabled: var(--mgn-neutral-8);
+	--mgn-text-link: var(--mgn-brand-4);
+
+	/* Controls */
+	--mgn-control: var(--mgn-neutral-14);
+	--mgn-control-button: var(--mgn-neutral-14);
+	--mgn-control-button-pressed: var(--mgn-neutral-13);
+	--mgn-control-border: var(--mgn-neutral-9);
+	--mgn-control-border-hover: var(--mgn-neutral-8);
+	--mgn-control-border-pressed: var(--mgn-neutral-7);
+	--mgn-control-disabled: var(--mgn-neutral-12);
+	--mgn-field-disabled: var(--mgn-neutral-13);
+	--mgn-field-disabled-border: var(--mgn-neutral-11);
+	--mgn-track: var(--mgn-neutral-7);
+
+	/* States */
+	--mgn-state-hover: var(--mgn-neutral-12);
+	--mgn-state-pressed: var(--mgn-neutral-11);
+	--mgn-selection: var(--mgn-brand-7);
+	--mgn-on-selection-secondary: var(--mgn-neutral-5);
+
+	/* Accent. `fill` sits behind --mgn-on-brand, `mark` is drawn as a line or icon. */
+	--mgn-brand-fill: var(--mgn-brand-5);
+	--mgn-brand-fill-hover: var(--mgn-brand-4);
+	--mgn-brand-fill-pressed: var(--mgn-brand-3);
+	--mgn-on-brand: var(--mgn-neutral-14);
+	--mgn-brand-mark: var(--mgn-brand-5);
+	--mgn-brand-soft: var(--mgn-brand-9);
+	--mgn-on-brand-soft: var(--mgn-brand-3);
+	--mgn-focus: var(--mgn-brand-5);
+
+	/* Status */
+	--mgn-on-status: var(--mgn-neutral-14);
+	--mgn-danger: var(--mgn-danger-3);
+	--mgn-danger-fill: var(--mgn-danger-3);
+	--mgn-danger-fill-hover: var(--mgn-danger-2);
+	--mgn-danger-fill-pressed: var(--mgn-danger-1);
+	--mgn-danger-mark: var(--mgn-danger-4);
+	--mgn-danger-soft: var(--mgn-danger-11);
+	--mgn-danger-line: var(--mgn-danger-9);
+	--mgn-success: var(--mgn-success-2);
+	--mgn-success-fill: var(--mgn-success-4);
+	--mgn-success-soft: var(--mgn-success-11);
+	--mgn-success-line: var(--mgn-success-9);
+	--mgn-warning: var(--mgn-warning-3);
+	--mgn-warning-soft: var(--mgn-warning-10);
+	--mgn-warning-line: var(--mgn-warning-6);
+
+	/* Code */
+	--mgn-code-text: #080808;
+	--mgn-code-property: #871094;
+	--mgn-code-string: #067d17;
+	--mgn-code-number: #1750eb;
+	--mgn-code-keyword: #0033b3;
+	--mgn-code-comment: #6c707e;
+	--mgn-code-gutter: var(--mgn-neutral-7);
+	--mgn-code-current-line: var(--mgn-brand-10);
+	--mgn-code-selection: var(--mgn-brand-8);
+	--mgn-code-match: var(--mgn-neutral-12);
+
+	/* Data series, in reading order */
+	--mgn-series-1: var(--mgn-brand-5);
+	--mgn-series-2: #3574f0;
+	--mgn-series-3: #039ba1;
+	--mgn-series-4: #834df0;
+	--mgn-series-5: #e56d17;
+
+	/* Scrollbar */
+	--mgn-scrollbar: #d9d9d9;
+	--mgn-scrollbar-hover: #7b7c7d;
+
+	/* Elevation, only for surfaces that left the page */
+	--mgn-elevation-tooltip: 0 3px 12px rgb(27 31 38 / 0.18);
+	--mgn-elevation-popup: 0 6px 20px rgb(145 145 145 / 0.47);
+	--mgn-elevation-dialog: 0 8px 40px rgb(0 0 0 / 0.3);
+
+	/*
+	  Control heights. Touch widths get a larger ladder, the desktop ladder starts
+	  at the single 768px breakpoint.
+	*/
+	--mgn-height-control: 2.25rem;
+	--mgn-height-control-slim: 2rem;
+	--mgn-height-toolbar: 2.25rem;
+	--mgn-height-row: 2.25rem;
+	--mgn-height-header: 3rem;
+}
+
+@media (min-width: 768px) {
+	:root {
+		--mgn-height-control: 1.75rem;
+		--mgn-height-control-slim: 1.5rem;
+		--mgn-height-toolbar: 1.625rem;
+		--mgn-height-row: 1.5rem;
+		--mgn-height-header: 2.5rem;
+	}
+}
+
+.dark {
+	color-scheme: dark;
+
+	--mgn-neutral-1: #1e1f22;
+	--mgn-neutral-2: #2b2d30;
+	--mgn-neutral-3: #393b40;
+	--mgn-neutral-4: #43454a;
+	--mgn-neutral-5: #4e5157;
+	--mgn-neutral-6: #5a5d63;
+	--mgn-neutral-7: #6f737a;
+	--mgn-neutral-8: #868a91;
+	--mgn-neutral-9: #9da0a8;
+	--mgn-neutral-10: #b4b8bf;
+	--mgn-neutral-11: #ced0d6;
+	--mgn-neutral-12: #dfe1e5;
+	--mgn-neutral-13: #f0f1f2;
+	--mgn-neutral-14: #ffffff;
+
+	--mgn-brand-1: #36203c;
+	--mgn-brand-2: #55305f;
+	--mgn-brand-3: #7a3f8a;
+	--mgn-brand-4: #9f1cb8;
+	--mgn-brand-5: #b420d0;
+	--mgn-brand-6: #c725e5;
+	--mgn-brand-7: #dd7bf0;
+	--mgn-brand-8: #e59bf4;
+	--mgn-brand-9: #edbdf7;
+	--mgn-brand-10: #f7e2fb;
+
+	--mgn-danger-1: #402929;
+	--mgn-danger-2: #5e3838;
+	--mgn-danger-3: #7a4343;
+	--mgn-danger-4: #9c4e4e;
+	--mgn-danger-5: #b55252;
+	--mgn-danger-6: #db5c5c;
+	--mgn-danger-7: #e37774;
+
+	--mgn-success-1: #253627;
+	--mgn-success-2: #375239;
+	--mgn-success-5: #57965c;
+	--mgn-success-7: #73bd79;
+
+	--mgn-warning-1: #3d3223;
+	--mgn-warning-2: #5e4d33;
+	--mgn-warning-7: #f2c55c;
+
+	--mgn-surface-content: var(--mgn-neutral-1);
+	--mgn-surface-chrome: var(--mgn-neutral-2);
+	--mgn-surface-popup: var(--mgn-neutral-2);
+	--mgn-surface-inverse: var(--mgn-neutral-3);
+	--mgn-on-inverse: var(--mgn-neutral-14);
+	--mgn-scrim: rgb(0 0 0 / 0.5);
+
+	--mgn-separator: var(--mgn-neutral-3);
+	--mgn-separator-region: var(--mgn-neutral-1);
+	--mgn-popup-border: var(--mgn-neutral-4);
+
+	--mgn-text: var(--mgn-neutral-12);
+	--mgn-text-secondary: var(--mgn-neutral-9);
+	--mgn-text-disabled: var(--mgn-neutral-8);
+	--mgn-text-link: var(--mgn-brand-8);
+
+	--mgn-control: var(--mgn-neutral-2);
+	--mgn-control-button: transparent;
+	--mgn-control-button-pressed: var(--mgn-neutral-2);
+	--mgn-control-border: var(--mgn-neutral-5);
+	--mgn-control-border-hover: var(--mgn-neutral-7);
+	--mgn-control-border-pressed: var(--mgn-neutral-7);
+	--mgn-control-disabled: var(--mgn-neutral-5);
+	--mgn-field-disabled: var(--mgn-neutral-2);
+	--mgn-field-disabled-border: var(--mgn-neutral-5);
+	--mgn-track: var(--mgn-neutral-8);
+
+	--mgn-state-hover: var(--mgn-neutral-3);
+	--mgn-state-pressed: var(--mgn-neutral-5);
+	--mgn-selection: var(--mgn-brand-2);
+	--mgn-on-selection-secondary: var(--mgn-neutral-11);
+
+	--mgn-brand-fill: var(--mgn-brand-6);
+	--mgn-brand-fill-hover: var(--mgn-brand-5);
+	--mgn-brand-fill-pressed: var(--mgn-brand-4);
+	--mgn-on-brand: var(--mgn-neutral-14);
+	--mgn-brand-mark: var(--mgn-brand-7);
+	--mgn-brand-soft: var(--mgn-brand-1);
+	--mgn-on-brand-soft: var(--mgn-brand-9);
+	--mgn-focus: var(--mgn-brand-7);
+
+	--mgn-on-status: var(--mgn-neutral-14);
+	--mgn-danger: var(--mgn-danger-7);
+	--mgn-danger-fill: var(--mgn-danger-5);
+	--mgn-danger-fill-hover: var(--mgn-danger-4);
+	--mgn-danger-fill-pressed: var(--mgn-danger-3);
+	--mgn-danger-mark: var(--mgn-danger-6);
+	--mgn-danger-soft: var(--mgn-danger-1);
+	--mgn-danger-line: var(--mgn-danger-2);
+	--mgn-success: var(--mgn-success-7);
+	--mgn-success-fill: var(--mgn-success-5);
+	--mgn-success-soft: var(--mgn-success-1);
+	--mgn-success-line: var(--mgn-success-2);
+	--mgn-warning: var(--mgn-warning-7);
+	--mgn-warning-soft: var(--mgn-warning-1);
+	--mgn-warning-line: var(--mgn-warning-2);
+
+	--mgn-code-text: #bdc0c9;
+	--mgn-code-property: #cf84cf;
+	--mgn-code-string: #6cab74;
+	--mgn-code-number: #51c0cf;
+	--mgn-code-keyword: #d69a6b;
+	--mgn-code-comment: var(--mgn-neutral-9);
+	--mgn-code-gutter: var(--mgn-neutral-7);
+	--mgn-code-current-line: var(--mgn-neutral-2);
+	--mgn-code-selection: var(--mgn-brand-1);
+	--mgn-code-match: var(--mgn-neutral-3);
+
+	--mgn-series-1: var(--mgn-brand-7);
+	--mgn-series-2: #548af7;
+	--mgn-series-3: #24a394;
+	--mgn-series-4: #a571e6;
+	--mgn-series-5: #c77d55;
+
+	--mgn-scrollbar: #48494b;
+	--mgn-scrollbar-hover: #595a5c;
+
+	--mgn-elevation-tooltip: 0 3px 12px rgb(0 0 0 / 0.3);
+	--mgn-elevation-popup: 0 8px 32px rgb(0 0 0 / 0.4);
+	--mgn-elevation-dialog: 0 8px 40px rgb(0 0 0 / 0.5);
+}

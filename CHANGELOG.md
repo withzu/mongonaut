@@ -12,6 +12,8 @@ carried no written notes.
 
 ### Added
 
+* Keyboard shortcuts throughout the interface, with a quick switcher for collections and actions on `Ctrl K` or `⌘K`, arrow keys in the sidebar, and a list of all shortcuts on `?`. Shortcuts on a single key can be turned off there.
+* The start page shows common actions and recent collections.
 * Readiness endpoint at `/api/ready`, reporting the running version, MongoDB connectivity and the resolved authentication configuration.
 * OCI image labels, so `docker inspect` identifies source, documentation, vendor and license on any image, including one built locally.
 * Published images now carry a software bill of materials and a full provenance attestation.
@@ -22,6 +24,7 @@ carried no written notes.
 
 ### Changed
 
+* Redesigned interface: gray chrome around a bright content surface, magenta as the single accent, denser controls, Inter and JetBrains Mono, and document and editor syntax colors that follow the theme. Menus open without animation. Colors now come from one role based token file, documented in `DESIGN.md`.
 * The container health check now uses `/api/ready` instead of `/api/health`, so a container no longer reports healthy while MongoDB is unreachable. `/api/health` stays a pure liveness probe and does not touch the database.
 * `package.json` carries description, repository, homepage, bugs, keywords and a Node.js engine constraint.
 * `react-scan` moved from runtime to development dependencies. It was already excluded from production behaviour.

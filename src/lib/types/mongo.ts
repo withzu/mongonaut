@@ -1,12 +1,3 @@
-export interface MongoServerInfo {
-	version: string;
-	host: string;
-	process: string;
-	pid: number;
-	uptime: number;
-	port?: number;
-}
-
 export interface Collection {
 	name: string;
 	totalSize: number | null;
@@ -35,21 +26,4 @@ export interface IndexSummary {
 	sparse: boolean;
 	ttlSeconds?: number;
 	size?: number;
-}
-
-export interface DatabaseStats {
-	db: string;
-	collections: number;
-	views: number;
-	objects: number;
-	avgObjSize: number;
-	dataSize: number;
-	storageSize: number;
-	indexes: number;
-	indexSize: number;
-	totalSize: number;
-	scaleFactor: number;
-	fsUsedSize: number;
-	fsTotalSize: number;
-	ok: number;
 }

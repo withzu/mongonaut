@@ -16,22 +16,16 @@ export function isValidJson(value: string): boolean {
 export function JsonValidityBadge({ valid }: { valid: boolean }) {
 	if (valid) {
 		return (
-			<Badge
-				variant="outline"
-				className="bg-green-500/10 text-green-800 dark:text-green-400 flex items-center gap-1 px-3 py-1"
-			>
-				<CheckCircle2 size={14} aria-hidden="true" />
+			<Badge variant="success">
+				<CheckCircle2 aria-hidden="true" />
 				<span>Valid JSON</span>
 			</Badge>
 		);
 	}
 
 	return (
-		<Badge
-			variant="outline"
-			className="bg-destructive/10 text-destructive flex items-center gap-1 px-3 py-1"
-		>
-			<AlertCircle size={14} />
+		<Badge variant="destructive">
+			<AlertCircle aria-hidden="true" />
 			<span>Invalid JSON</span>
 		</Badge>
 	);

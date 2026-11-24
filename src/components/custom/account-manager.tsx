@@ -69,25 +69,25 @@ export function AccountManager({
 	const refresh = () => router.refresh();
 
 	return (
-		<div className="flex flex-col gap-6">
+		<div className="flex flex-col gap-5">
 			<div className="flex items-center justify-between gap-2">
 				<div>
-					<h1 className="text-lg font-semibold">Accounts &amp; settings</h1>
+					<h1 className="text-base font-semibold">Accounts &amp; settings</h1>
 					<p className="text-muted-foreground text-sm">
 						Manage who can access this Mongonaut instance and what they can do.
 					</p>
 				</div>
-				<Button className="flex items-center gap-2" onClick={() => setCreateOpen(true)}>
+				<Button onClick={() => setCreateOpen(true)}>
 					<PlusIcon size={16} />
 					Add account
 				</Button>
 			</div>
 
-			<div className="bg-muted/30 flex flex-wrap items-center gap-x-6 gap-y-1 rounded-lg px-4 py-3 text-sm">
+			<div className="bg-chrome flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border px-3 py-2 text-sm">
 				<div className="flex items-center gap-2">
-					<ShieldIcon size={14} className="text-primary" />
+					<ShieldIcon size={16} className="text-muted-foreground" />
 					<span className="text-muted-foreground">Authentication mode:</span>
-					<span className="font-medium">{authMode}</span>
+					<span className="font-semibold">{authMode}</span>
 				</div>
 				<span className="text-muted-foreground text-xs">
 					The mode is controlled by the MONGONAUT_AUTH_MODE environment variable.
@@ -148,6 +148,7 @@ export function AccountManager({
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
 						<AlertDialogAction
+							variant="destructive"
 							onClick={async () => {
 								if (!deleting) return;
 								const result = await deleteAccountAction(deleting.id);
@@ -183,16 +184,12 @@ function AccountRow({
 	onDelete: () => void;
 }) {
 	return (
-		<div className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3">
+		<div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
 			<div className="min-w-0">
 				<div className="flex items-center gap-2">
-					<span className="truncate font-medium">{account.name || account.email}</span>
+					<span className="truncate font-semibold">{account.name || account.email}</span>
 					{account.isAdmin && <Badge variant="outline">Admin</Badge>}
-					{account.disabled && (
-						<Badge variant="outline" className="text-destructive border-destructive/40">
-							Disabled
-						</Badge>
-					)}
+					{account.disabled && <Badge variant="destructive">Disabled</Badge>}
 					{isSelf && <Badge variant="secondary">You</Badge>}
 				</div>
 				<div className="text-muted-foreground truncate text-xs">
@@ -215,7 +212,7 @@ function AccountRow({
 					onClick={onDelete}
 					disabled={isSelf}
 					aria-label="Delete account"
-					className="text-muted-foreground hover:text-destructive"
+					className="text-muted-foreground hover:bg-danger-soft hover:text-destructive active:bg-danger-soft"
 				>
 					<TrashIcon size={16} />
 				</Button>
@@ -338,7 +335,7 @@ function AccountFormDialog({
 
 					<div className="flex items-center justify-between rounded-md border px-3 py-2">
 						<div>
-							<p className="text-sm font-medium">Administrator</p>
+							<p className="text-sm">Administrator</p>
 							<p className="text-muted-foreground text-xs">Full access and account management.</p>
 						</div>
 						<Switch checked={isAdmin} onCheckedChange={setIsAdmin} disabled={isSelf} />
@@ -347,7 +344,7 @@ function AccountFormDialog({
 					{mode === 'edit' && (
 						<div className="flex items-center justify-between rounded-md border px-3 py-2">
 							<div>
-								<p className="text-sm font-medium">Disabled</p>
+								<p className="text-sm">Disabled</p>
 								<p className="text-muted-foreground text-xs">Blocks sign-in and revokes access.</p>
 							</div>
 							<Switch checked={disabled} onCheckedChange={setDisabled} disabled={isSelf} />
@@ -412,12 +409,12 @@ function GrantsEditor({
 
 	return (
 		<div className="flex flex-col gap-2">
-			<p className="text-sm font-medium">Access grants</p>
+			<p className="text-sm">Access grants</p>
 			<p className="text-muted-foreground text-xs">
 				Grant access per database. Choose &quot;All collections&quot; to cover the whole database.
 			</p>
 			{grants.length === 0 && (
-				<p className="text-muted-foreground rounded-md border border-dashed px-3 py-3 text-xs">
+				<p className="text-muted-foreground rounded-lg border border-dashed p-3 text-sm">
 					No grants yet. This account can sign in but cannot read any data.
 				</p>
 			)}
@@ -425,10 +422,7 @@ function GrantsEditor({
 				<div key={index} className="flex items-center gap-2">
 					<Select
 						value={grant.database || undefined}
-						onValueChange={value =>
-							// Reset the collection when the database changes.
-							update(index, { database: value, collection: ALL_COLLECTIONS })
-						}
+						onValueChange={value => update(index, { database: value, collection: ALL_COLLECTIONS })}
 					>
 						<SelectTrigger className="flex-1" aria-label={`Database for grant ${index + 1}`}>
 							<SelectValue placeholder="Database" />
@@ -554,8 +548,8 @@ function ResetPasswordDialog({
 function Labeled({ label, children }: { label: string; children: ReactElement<{ id?: string }> }) {
 	const id = useId();
 	return (
-		<div className="flex flex-col gap-2">
-			<label htmlFor={id} className="text-sm font-medium">
+		<div className="flex flex-col gap-1.5">
+			<label htmlFor={id} className="text-sm">
 				{label}
 			</label>
 			{cloneElement(children, { id })}

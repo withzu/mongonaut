@@ -165,14 +165,12 @@ export class MongoController {
 		}
 	}
 
-	// SERVER
 	public async getServerInfo(): Promise<ControllerResult<Document>> {
 		return this.run('Could not read server information', () =>
 			this.client.db().admin().serverInfo(),
 		);
 	}
 
-	// DATABASE
 	public async listDatabases(): Promise<
 		ControllerResult<{ databases: { name: string; sizeOnDisk?: number }[] }>
 	> {
@@ -192,7 +190,6 @@ export class MongoController {
 		});
 	}
 
-	// COLLECTION
 	public async getDatabaseCollections(
 		name: string,
 	): Promise<ControllerResult<CollectionSummary[]>> {
@@ -299,7 +296,6 @@ export class MongoController {
 		});
 	}
 
-	// INDEXES
 	public async listIndexes(
 		dbName: string,
 		collectionName: string,
@@ -352,7 +348,6 @@ export class MongoController {
 		});
 	}
 
-	// DOCUMENTS
 	public async browseDocuments(
 		dbName: string,
 		collectionName: string,

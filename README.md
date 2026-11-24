@@ -22,7 +22,7 @@
   <a href="https://github.com/withzu/mongonaut/issues">Issues</a>
 </p>
 
-<p align="center">
+<p align="center">Å
   <a href="https://github.com/withzu/mongonaut/releases">
     <img alt="Latest release" src="https://img.shields.io/github/v/release/withzu/mongonaut?display_name=tag" />
   </a>
@@ -35,7 +35,7 @@
 </p>
 
 <p align="center">
-  <img width="2560" height="1436" alt="Mongonaut interface" src="https://github.com/user-attachments/assets/b18b325b-881f-44d8-99b9-ec3ddc997c2d" />
+  <img width="2560" height="1436" alt="Mongonaut interface" src=".github/screenshot.png" />
 </p>
 
 ## About Mongonaut

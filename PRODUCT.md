@@ -56,7 +56,7 @@ Access control, read-only mode and identity provider support are real capabiliti
 
 **Technical constraints**
 
-- Next.js App Router, React, TypeScript, Tailwind CSS v4 with an HSL CSS variable token layer, the official MongoDB Node.js driver. Distributed as a single Docker image, MIT licensed.
+- Next.js App Router, React, TypeScript, Tailwind CSS v4 with a two tier CSS variable token layer, the official MongoDB Node.js driver. Distributed as a single Docker image, MIT licensed.
 - Node.js 24 and pnpm for local development. pnpm is the package manager, never npm or yarn.
 - Requires a reachable MongoDB deployment. Nothing works offline or with mocked data.
 - Every capability has to degrade correctly under two independent restrictions: the global read-only flag, and the signed-in account's grants. Any surface that offers a write action must be able to render the same surface without it.
@@ -65,22 +65,22 @@ Access control, read-only mode and identity provider support are real capabiliti
 **Explicitly undecided**
 
 - The component base (shadcn-style components on Radix primitives) is the incumbent implementation but was not declared a binding commitment. It may be revisited.
-- The current warm paper neutral theme is the incumbent visual world, not a fixed brand asset. Only the amber identity below is binding.
+- The current tool window theme, gray chrome around a bright content surface, is the incumbent visual world, not a fixed brand asset. Only the accent below is binding.
 
 ## Brand Commitments
 
 - Name: **Mongonaut**, a product of **The Zu Company**.
-- **Amber `#FFB211` is brand identity, not a theme choice.** It stays the accent identity of the product wherever the product is styled.
+- **Magenta `#C725E5` is the accent of the product.** It stays the accent wherever the product is styled. The Zu Company logos keep their own colors.
 - The Zu Company logos, the MIT license, and links to `mongonaut.org` and the GitHub repository stay present in the product.
 - Voice is plain, technical and unhyped. The README states facts and configuration, never benefits or superlatives. User-facing text avoids dashes, both hyphen-style and em dashes, in favour of plain wording.
 - Documentation lives at `mongonaut.org/docs`, outside this repository. The product links to it rather than restating it.
 
 ## Evidence on Hand
 
-- Logo and brand assets: `public/images/logo.svg`, `public/images/logo.png`, `public/images/zu/logo.svg`, `public/images/zu/logo-dark.svg`, `public/images/github-mark.svg`, `src/app/icon.png`.
+- Logo and brand assets: `public/images/logo.svg`, `public/images/logo-mark.svg` (the same logo without its empty margin), `public/images/logo.png`, `public/images/zu/logo.svg`, `public/images/zu/logo-dark.svg`, `public/images/github-mark.svg`, `src/app/icon.png`.
 - Repository banner: `.github/banner.png`. A full interface screenshot is embedded in `README.md`.
-- Typography currently in use: Geist Sans and Geist Mono via `next/font`.
-- Incumbent visual world: `src/app/globals.css`, a warm paper neutral palette with an amber accent in both light and dark.
+- Typography currently in use: Inter and JetBrains Mono via `next/font`.
+- Incumbent visual world: `src/app/tokens.css`, a neutral gray palette with a magenta accent in both light and dark. Rules are in `DESIGN.md`.
 - Real product surfaces that can be shown: sidebar database tree, collection document view, query panel, JSON document editor, account manager, login, first-run setup, about page, connection error state.
 - Public proof: MIT license, GitHub releases, stars and issues, the published container image.
 - **Absent and not to be invented:** no testimonials, no named customers, no user counts, no download or performance benchmarks, no pricing, no commercial plan, no SLA, no security certification. The product is beta software and says so.

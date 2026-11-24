@@ -4,14 +4,14 @@ import { AppContainer } from '@/components/custom/app-container';
 export default function Loading() {
 	return (
 		<AppContainer>
-			<div className="flex items-center gap-2">
+			<div className="hidden min-h-(--mgn-height-control-slim) items-center gap-2 md:flex">
 				<Skeleton className="h-4 w-32" />
 				<Skeleton className="h-4 w-4" />
 				<Skeleton className="h-4 w-32" />
 			</div>
 
-			<div className="w-full h-full flex flex-col gap-4">
-				<div className="w-full flex items-center gap-6 px-4 py-3 bg-muted/30 rounded-lg">
+			<div className="flex h-full w-full flex-col gap-3">
+				<div className="bg-chrome flex w-full items-center gap-4 rounded-lg border px-3 py-2">
 					<div className="flex items-center gap-2">
 						<Skeleton className="h-4 w-4" />
 						<Skeleton className="h-4 w-16" />
@@ -29,22 +29,22 @@ export default function Loading() {
 					</div>
 				</div>
 
-				<Skeleton className="w-full h-10 rounded-lg" />
+				<Skeleton className="h-32 w-full rounded-lg" />
 
-				<div className="space-y-4">
+				<div className="space-y-3">
 					<Skeleton className="w-full h-48 rounded-lg" />
 					<Skeleton className="w-full h-48 rounded-lg" />
 					<Skeleton className="w-full h-48 rounded-lg" />
 				</div>
 
 				<div className="flex items-center justify-between">
-					<Skeleton className="h-8 w-24" />
+					<Skeleton className="h-(--mgn-height-control) w-24" />
 					<div className="flex gap-2">
-						<Skeleton className="h-8 w-8" />
-						<Skeleton className="h-8 w-8" />
-						<Skeleton className="h-8 w-8" />
+						<Skeleton className="size-(--mgn-height-control)" />
+						<Skeleton className="size-(--mgn-height-control)" />
+						<Skeleton className="size-(--mgn-height-control)" />
 					</div>
-					<Skeleton className="h-8 w-24" />
+					<Skeleton className="h-(--mgn-height-control) w-24" />
 				</div>
 			</div>
 		</AppContainer>

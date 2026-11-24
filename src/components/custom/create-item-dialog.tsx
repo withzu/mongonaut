@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useId, useState, type KeyboardEvent } from 'react';
 import { toast } from 'sonner';
 import {
 	Dialog,
@@ -92,6 +92,13 @@ export function CreateItemDialog({
 		}
 	};
 
+	const createOnEnter = (event: KeyboardEvent) => {
+		if (event.key === 'Enter' && !event.nativeEvent.isComposing && !isCreating) {
+			event.preventDefault();
+			void handleCreate();
+		}
+	};
+
 	return (
 		<Dialog
 			open={open}
@@ -120,28 +127,30 @@ export function CreateItemDialog({
 						className="w-full"
 						onValueChange={(value: string) => setSelectedItemType(value as ItemType)}
 					>
-						<TabsList className="grid w-full grid-cols-2">
+						<TabsList className="w-full border-b">
 							<TabsTrigger value="database">Database</TabsTrigger>
 							<TabsTrigger value="collection">Collection</TabsTrigger>
 						</TabsList>
-						<div className="mt-4 space-y-4">
-							<TabsContent value="database">
-								<div className="space-y-2">
-									<label htmlFor={dbNameId} className="text-sm font-medium">
+						<div className="mt-4 space-y-3">
+							<TabsContent value="database" className="rounded-md focus-visible:outline-offset-4">
+								<div className="flex flex-col gap-1.5">
+									<label htmlFor={dbNameId} className="text-sm">
 										Database Name
 									</label>
 									<Input
 										id={dbNameId}
 										value={dbName}
 										onChange={e => setDbName(e.target.value)}
+										onKeyDown={createOnEnter}
+										autoFocus
 										placeholder="e.g. my_new_database"
 									/>
 								</div>
 							</TabsContent>
-							<TabsContent value="collection">
-								<div className="space-y-4">
-									<div className="space-y-2">
-										<label htmlFor={selectDbId} className="text-sm font-medium">
+							<TabsContent value="collection" className="rounded-md focus-visible:outline-offset-4">
+								<div className="space-y-3">
+									<div className="flex flex-col gap-1.5">
+										<label htmlFor={selectDbId} className="text-sm">
 											Select Database
 										</label>
 										<Select value={selectedDb} onValueChange={setSelectedDb}>
@@ -162,14 +171,15 @@ export function CreateItemDialog({
 											</p>
 										)}
 									</div>
-									<div className="space-y-2">
-										<label htmlFor={collectionNameId} className="text-sm font-medium">
+									<div className="flex flex-col gap-1.5">
+										<label htmlFor={collectionNameId} className="text-sm">
 											Collection Name
 										</label>
 										<Input
 											id={collectionNameId}
 											value={collectionName}
 											onChange={e => setCollectionName(e.target.value)}
+											onKeyDown={createOnEnter}
 											placeholder="e.g. users"
 										/>
 									</div>
@@ -178,20 +188,22 @@ export function CreateItemDialog({
 						</div>
 					</Tabs>
 				) : (
-					<div className="space-y-2 mt-4">
-						<label htmlFor={dbNameId} className="text-sm font-medium">
+					<div className="flex flex-col gap-1.5">
+						<label htmlFor={dbNameId} className="text-sm">
 							Database Name
 						</label>
 						<Input
 							id={dbNameId}
 							value={dbName}
 							onChange={e => setDbName(e.target.value)}
+							onKeyDown={createOnEnter}
+							autoFocus
 							placeholder="e.g. my_new_database"
 						/>
 					</div>
 				)}
 
-				<DialogFooter className="mt-6">
+				<DialogFooter>
 					<Button variant="outline" onClick={() => onOpenChange(false)}>
 						Cancel
 					</Button>

@@ -32,6 +32,8 @@ interface DatabaseFetcherProps {
 
 interface DatabaseFetcherContextType {
 	reloadData: () => Promise<void>;
+	databases: Database[];
+	canCreate: boolean;
 }
 
 const DatabaseFetcherContext = createContext<DatabaseFetcherContextType | null>(null);
@@ -86,15 +88,25 @@ export function DatabaseFetcher({ initial, children }: DatabaseFetcherProps) {
 		});
 	};
 
+	const globalReadonly = viewer?.globalReadonly ?? false;
+	const canCreate = !globalReadonly && (viewer?.canCreateDatabase ?? false);
+	const canWrite =
+		!globalReadonly &&
+		databases.some(
+			database => database.canWrite || database.collections.some(entry => entry.canWrite),
+		);
+
 	return (
-		<DatabaseFetcherContext.Provider value={{ reloadData }}>
+		<DatabaseFetcherContext.Provider value={{ reloadData, databases, canCreate }}>
 			<DatabaseContent
 				databases={databases}
 				totalSize={totalSize}
 				serverInfo={serverInfo}
 				isAccountAdmin={viewer?.isAccountAdmin ?? false}
 				canCreateDatabase={viewer?.canCreateDatabase ?? false}
-				globalReadonly={viewer?.globalReadonly ?? false}
+				globalReadonly={globalReadonly}
+				canCreate={canCreate}
+				canWrite={canWrite}
 				error={error}
 				loading={isPending}
 			>

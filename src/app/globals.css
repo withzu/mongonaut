@@ -1,179 +1,178 @@
 @import 'tailwindcss';
+@import './tokens.css';
 
 @plugin 'tailwindcss-animate';
 
 @custom-variant dark (&:is(.dark *));
 
-@theme {
-	--color-background: hsl(var(--background));
-	--color-foreground: hsl(var(--foreground));
+/*
+  Utility names for the roles in tokens.css. The first block keeps the names the
+  component base already uses, the second adds the roles it has no name for.
+*/
+@theme inline {
+	--color-background: var(--mgn-surface-content);
+	--color-foreground: var(--mgn-text);
+	--color-card: var(--mgn-surface-chrome);
+	--color-card-foreground: var(--mgn-text);
+	--color-popover: var(--mgn-surface-popup);
+	--color-popover-foreground: var(--mgn-text);
+	--color-primary: var(--mgn-brand-fill);
+	--color-primary-foreground: var(--mgn-on-brand);
+	--color-secondary: var(--mgn-state-hover);
+	--color-secondary-foreground: var(--mgn-text);
+	--color-muted: var(--mgn-surface-chrome);
+	--color-muted-foreground: var(--mgn-text-secondary);
+	--color-accent: var(--mgn-state-hover);
+	--color-accent-foreground: var(--mgn-text);
+	--color-destructive: var(--mgn-danger);
+	--color-destructive-foreground: var(--mgn-on-status);
+	--color-border: var(--mgn-separator);
+	--color-input: var(--mgn-control-border);
+	--color-ring: var(--mgn-focus);
+	--color-brand: var(--mgn-brand-mark);
+	--color-sidebar: var(--mgn-surface-chrome);
+	--color-sidebar-foreground: var(--mgn-text);
+	--color-sidebar-border: var(--mgn-separator-region);
+	--color-chart-1: var(--mgn-series-1);
+	--color-chart-2: var(--mgn-series-2);
+	--color-chart-3: var(--mgn-series-3);
+	--color-chart-4: var(--mgn-series-4);
+	--color-chart-5: var(--mgn-series-5);
 
-	--color-card: hsl(var(--card));
-	--color-card-foreground: hsl(var(--card-foreground));
+	--color-chrome: var(--mgn-surface-chrome);
+	--color-inverse: var(--mgn-surface-inverse);
+	--color-inverse-foreground: var(--mgn-on-inverse);
+	--color-inverse-success: var(--mgn-on-inverse-success);
+	--color-inverse-danger: var(--mgn-on-inverse-danger);
+	--color-scrim: var(--mgn-scrim);
+	--color-region: var(--mgn-separator-region);
+	--color-popup-border: var(--mgn-popup-border);
+	--color-link: var(--mgn-text-link);
+	--color-disabled: var(--mgn-control-disabled);
+	--color-disabled-foreground: var(--mgn-text-disabled);
+	--color-control: var(--mgn-control);
+	--color-control-button: var(--mgn-control-button);
+	--color-control-button-pressed: var(--mgn-control-button-pressed);
+	--color-control-border: var(--mgn-control-border);
+	--color-control-border-hover: var(--mgn-control-border-hover);
+	--color-control-border-pressed: var(--mgn-control-border-pressed);
+	--color-field-disabled: var(--mgn-field-disabled);
+	--color-field-disabled-border: var(--mgn-field-disabled-border);
+	--color-track: var(--mgn-track);
+	--color-hover: var(--mgn-state-hover);
+	--color-pressed: var(--mgn-state-pressed);
+	--color-selection: var(--mgn-selection);
+	--color-selection-secondary: var(--mgn-on-selection-secondary);
+	--color-primary-hover: var(--mgn-brand-fill-hover);
+	--color-primary-pressed: var(--mgn-brand-fill-pressed);
+	--color-brand-soft: var(--mgn-brand-soft);
+	--color-brand-soft-foreground: var(--mgn-on-brand-soft);
+	--color-on-status: var(--mgn-on-status);
+	--color-danger-fill: var(--mgn-danger-fill);
+	--color-danger-fill-hover: var(--mgn-danger-fill-hover);
+	--color-danger-fill-pressed: var(--mgn-danger-fill-pressed);
+	--color-danger-mark: var(--mgn-danger-mark);
+	--color-danger-soft: var(--mgn-danger-soft);
+	--color-danger-line: var(--mgn-danger-line);
+	--color-success: var(--mgn-success);
+	--color-success-fill: var(--mgn-success-fill);
+	--color-success-soft: var(--mgn-success-soft);
+	--color-success-line: var(--mgn-success-line);
+	--color-warning: var(--mgn-warning);
+	--color-warning-soft: var(--mgn-warning-soft);
+	--color-warning-line: var(--mgn-warning-line);
 
-	--color-popover: hsl(var(--popover));
-	--color-popover-foreground: hsl(var(--popover-foreground));
+	--font-sans: var(--mgn-font-ui), ui-sans-serif, system-ui, -apple-system, sans-serif;
+	--font-mono: var(--mgn-font-code), ui-monospace, SFMono-Regular, monospace;
 
-	--color-primary: hsl(var(--primary));
-	--color-primary-foreground: hsl(var(--primary-foreground));
-
-	--color-secondary: hsl(var(--secondary));
-	--color-secondary-foreground: hsl(var(--secondary-foreground));
-
-	--color-muted: hsl(var(--muted));
-	--color-muted-foreground: hsl(var(--muted-foreground));
-
-	--color-accent: hsl(var(--accent));
-	--color-accent-foreground: hsl(var(--accent-foreground));
-
-	--color-destructive: hsl(var(--destructive));
-	--color-destructive-foreground: hsl(var(--destructive-foreground));
-
-	--color-border: hsl(var(--border));
-	--color-input: hsl(var(--input));
-	--color-ring: hsl(var(--ring));
-
-	--color-chart-1: hsl(var(--chart-1));
-	--color-chart-2: hsl(var(--chart-2));
-	--color-chart-3: hsl(var(--chart-3));
-	--color-chart-4: hsl(var(--chart-4));
-	--color-chart-5: hsl(var(--chart-5));
-
-	--color-sidebar: hsl(var(--sidebar-background));
-	--color-sidebar-foreground: hsl(var(--sidebar-foreground));
-	--color-sidebar-primary: hsl(var(--sidebar-primary));
-	--color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
-	--color-sidebar-accent: hsl(var(--sidebar-accent));
-	--color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
-	--color-sidebar-border: hsl(var(--sidebar-border));
-	--color-sidebar-ring: hsl(var(--sidebar-ring));
-
-	--color-brand: hsl(var(--brand));
-	--color-brand-foreground: hsl(var(--brand-foreground));
-
-	--radius-sm: calc(var(--radius) - 4px);
-	--radius-md: calc(var(--radius) - 2px);
-	--radius-lg: var(--radius);
-	--radius-xl: calc(var(--radius) + 4px);
+	--shadow-sm: var(--mgn-elevation-tooltip);
+	--shadow-md: var(--mgn-elevation-popup);
+	--shadow-lg: var(--mgn-elevation-dialog);
 }
 
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
+@theme {
+	/*
+	  Type ramp. `text-sm` is the default, `text-base` the heading and `text-xl` the
+	  one title per screen. Weights are regular and semibold, nothing in between.
+	*/
+	--text-xs: 0.75rem;
+	--text-xs--line-height: 1rem;
+	--text-sm: 0.8125rem;
+	--text-sm--line-height: 1rem;
+	--text-base: 1rem;
+	--text-base--line-height: 1.25rem;
+	--text-xl: 1.25rem;
+	--text-xl--line-height: 1.5rem;
+	--leading-paragraph: 1.125rem;
+	--leading-code: 1.375rem;
 
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
+	/* 3px marks and toolbar states, 4px controls and rows, 8px detached surfaces */
+	--radius-sm: 3px;
+	--radius-md: 4px;
+	--radius-lg: 8px;
+	--radius-xl: 8px;
+}
+
+/* Focus is one 2px line. Fills get a 1px gap, bordered controls replace their border. */
+@utility focus-fill {
+	outline: none;
+	&:focus-visible {
+		outline: 2px solid var(--mgn-focus);
+		outline-offset: 1px;
+	}
+}
+
+@utility focus-field {
+	outline: none;
+	&:focus-visible,
+	&[aria-invalid='true'] {
+		border-color: transparent;
+		outline: 2px solid var(--mgn-focus);
+		outline-offset: -1px;
+	}
+	&[aria-invalid='true'] {
+		outline-color: var(--mgn-danger-line);
+	}
+	&[aria-invalid='true']:focus-visible {
+		outline-color: var(--mgn-danger-mark);
+	}
+}
+
+@utility focus-row {
+	outline: none;
+	&:focus-visible {
+		outline: 2px solid var(--mgn-focus);
+		outline-offset: -2px;
+	}
+}
+
+@utility no-scrollbar {
+	scrollbar-width: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
+}
+
 @layer base {
 	*,
 	::after,
 	::before,
 	::backdrop,
 	::file-selector-button {
-		border-color: var(--color-gray-200, currentColor);
-	}
-}
-
-@layer utilities {
-	body {
-		font-family:
-			var(--font-geist-sans),
-			ui-sans-serif,
-			system-ui,
-			-apple-system,
-			sans-serif;
-		font-feature-settings: 'cv11', 'ss01';
-		text-rendering: optimizeLegibility;
-	}
-}
-
-@layer base {
-	/* Paper Layout — warm paper neutrals with an amber editorial accent */
-	:root {
-		--background: 40 30% 98%;
-		--foreground: 28 14% 16%;
-		--card: 44 36% 99%;
-		--card-foreground: 28 14% 16%;
-		--popover: 44 36% 99%;
-		--popover-foreground: 28 14% 16%;
-		--primary: 28 16% 19%;
-		--primary-foreground: 40 30% 98%;
-		--secondary: 40 22% 93%;
-		--secondary-foreground: 28 16% 22%;
-		--muted: 40 22% 93%;
-		--muted-foreground: 32 8% 44%;
-		--accent: 40 30% 90%;
-		--accent-foreground: 28 16% 22%;
-		--destructive: 4 76% 45%;
-		--destructive-foreground: 40 30% 98%;
-		--border: 38 18% 87%;
-		--input: 38 18% 87%;
-		--ring: 35 92% 40%;
-		--brand: 30 90% 40%;
-		--brand-foreground: 40 30% 98%;
-		--chart-1: 32 90% 52%;
-		--chart-2: 18 74% 52%;
-		--chart-3: 168 52% 38%;
-		--chart-4: 256 42% 56%;
-		--chart-5: 200 60% 44%;
-		--radius: 0.625rem;
-		--sidebar-background: 42 28% 96%;
-		--sidebar-foreground: 30 10% 32%;
-		--sidebar-primary: 30 90% 40%;
-		--sidebar-primary-foreground: 40 30% 98%;
-		--sidebar-accent: 38 50% 90%;
-		--sidebar-accent-foreground: 28 92% 30%;
-		--sidebar-border: 38 18% 87%;
-		--sidebar-ring: 35 92% 40%;
-	}
-	.dark {
-		--background: 30 8% 10%;
-		--foreground: 40 22% 91%;
-		--card: 30 7% 13%;
-		--card-foreground: 40 22% 91%;
-		--popover: 30 8% 12%;
-		--popover-foreground: 40 22% 91%;
-		--primary: 40 28% 91%;
-		--primary-foreground: 28 14% 14%;
-		--secondary: 30 6% 18%;
-		--secondary-foreground: 40 22% 91%;
-		--muted: 30 6% 16%;
-		--muted-foreground: 36 11% 62%;
-		--accent: 32 9% 22%;
-		--accent-foreground: 40 22% 91%;
-		--destructive: 4 80% 64%;
-		--destructive-foreground: 28 14% 12%;
-		--border: 30 6% 20%;
-		--input: 30 6% 20%;
-		--ring: 38 90% 56%;
-		--brand: 38 92% 60%;
-		--brand-foreground: 28 14% 14%;
-		--chart-1: 38 92% 58%;
-		--chart-2: 18 78% 58%;
-		--chart-3: 168 48% 50%;
-		--chart-4: 256 52% 68%;
-		--chart-5: 200 64% 56%;
-		--sidebar-background: 28 9% 9%;
-		--sidebar-foreground: 38 14% 72%;
-		--sidebar-primary: 38 92% 60%;
-		--sidebar-primary-foreground: 28 14% 12%;
-		--sidebar-accent: 34 24% 18%;
-		--sidebar-accent-foreground: 40 95% 64%;
-		--sidebar-border: 30 6% 18%;
-		--sidebar-ring: 38 90% 56%;
-	}
-}
-
-@layer base {
-	* {
 		@apply border-border;
 	}
+
 	html {
 		scrollbar-gutter: stable;
 	}
+
 	body {
-		@apply bg-background text-foreground;
+		@apply bg-background text-foreground font-sans text-sm;
+		text-rendering: optimizeLegibility;
+	}
+
+	::selection {
+		background: var(--mgn-code-selection);
 	}
 
 	::-webkit-scrollbar {
@@ -182,15 +181,26 @@
 	}
 
 	::-webkit-scrollbar-track {
-		background: hsl(var(--background));
+		background: transparent;
 	}
 
 	::-webkit-scrollbar-thumb {
-		background: hsl(var(--accent));
+		background: var(--mgn-scrollbar);
 		border-radius: 4px;
 	}
 
 	::-webkit-scrollbar-thumb:hover {
-		background: hsl(var(--muted-foreground));
+		background: var(--mgn-scrollbar-hover);
 	}
+}
+
+/* json-edit-react ships fixed grays under its own --jer- prefix. */
+.jer-editor-container {
+	--jer-select-border: var(--mgn-control-border);
+	--jer-select-focus: var(--mgn-focus);
+	--jer-select-arrow: var(--mgn-text-secondary);
+	--jer-form-border: 1px solid var(--mgn-control-border);
+	--jer-form-border-focus: 1px solid var(--mgn-focus);
+	--jer-highlight-color: var(--mgn-code-selection);
+	--jer-icon-copy-color: var(--mgn-text-secondary);
 }

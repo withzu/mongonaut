@@ -6,7 +6,6 @@ import {
 	deleteAccount,
 	DuplicateEmailError,
 	LastAdminError,
-	listAccounts,
 	setAccountPassword,
 	toPublicAccount,
 	updateAccount,
@@ -40,13 +39,6 @@ function validateGrants(grants: unknown): Grant[] {
 		result.push({ database, collection: collection || '*', access });
 	}
 	return result;
-}
-
-export async function listAccountsAction(): Promise<AdminResult<PublicAccount[]>> {
-	const guard = await requireAdmin();
-	if (!guard.allowed) return { success: false, error: guard.error };
-	const accounts = await listAccounts();
-	return { success: true, data: accounts.map(toPublicAccount) };
 }
 
 export interface CreateAccountActionInput {

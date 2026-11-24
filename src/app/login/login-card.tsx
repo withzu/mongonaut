@@ -2,8 +2,8 @@
 
 import { FormEvent, useState } from 'react';
 import Image from 'next/image';
-import { AlertCircle } from 'lucide-react';
 import { AuthMode } from '@/lib/auth/config';
+import { Banner } from '@/components/ui/banner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -41,16 +41,18 @@ export function LoginCard({ mode, misconfigured, next, error }: LoginCardProps) 
 						className="h-12 w-12 dark:invert"
 						priority
 					/>
-					<span className="text-2xl font-semibold tracking-tight">Mongonaut</span>
+					<span className="text-xl font-semibold">Mongonaut</span>
 				</div>
 
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-base">Authentication required</CardTitle>
+						<CardTitle>Authentication required</CardTitle>
 						<CardDescription>Sign in to continue.</CardDescription>
 					</CardHeader>
 					<CardContent className="flex flex-col gap-4">
-						{error && ERROR_MESSAGES[error] && <Notice>{ERROR_MESSAGES[error]}</Notice>}
+						{error && ERROR_MESSAGES[error] && (
+							<Banner variant="error">{ERROR_MESSAGES[error]}</Banner>
+						)}
 
 						{misconfigured && <MisconfiguredNotice mode={mode} />}
 
@@ -100,8 +102,8 @@ function PasswordForm({ next }: { next: string }) {
 
 	return (
 		<form className="flex flex-col gap-4" onSubmit={onSubmit}>
-			<div className="flex flex-col gap-2">
-				<label htmlFor="password" className="text-sm font-medium">
+			<div className="flex flex-col gap-1.5">
+				<label htmlFor="password" className="text-sm">
 					Password
 				</label>
 				<Input
@@ -116,13 +118,9 @@ function PasswordForm({ next }: { next: string }) {
 				/>
 			</div>
 
-			{errorMessage && <Notice>{errorMessage}</Notice>}
+			{errorMessage && <Banner variant="error">{errorMessage}</Banner>}
 
-			<Button
-				type="submit"
-				disabled={submitting || password.length === 0}
-				className="w-full bg-[#FFB211] text-black hover:bg-[#E5A010]"
-			>
+			<Button type="submit" disabled={submitting || password.length === 0} className="w-full">
 				{submitting ? 'Signing in…' : 'Sign in'}
 			</Button>
 		</form>
@@ -167,8 +165,8 @@ function AccountForm({ next }: { next: string }) {
 
 	return (
 		<form className="flex flex-col gap-4" onSubmit={onSubmit}>
-			<div className="flex flex-col gap-2">
-				<label htmlFor="email" className="text-sm font-medium">
+			<div className="flex flex-col gap-1.5">
+				<label htmlFor="email" className="text-sm">
 					Email
 				</label>
 				<Input
@@ -182,8 +180,8 @@ function AccountForm({ next }: { next: string }) {
 					disabled={submitting}
 				/>
 			</div>
-			<div className="flex flex-col gap-2">
-				<label htmlFor="password" className="text-sm font-medium">
+			<div className="flex flex-col gap-1.5">
+				<label htmlFor="password" className="text-sm">
 					Password
 				</label>
 				<Input
@@ -197,12 +195,12 @@ function AccountForm({ next }: { next: string }) {
 				/>
 			</div>
 
-			{errorMessage && <Notice>{errorMessage}</Notice>}
+			{errorMessage && <Banner variant="error">{errorMessage}</Banner>}
 
 			<Button
 				type="submit"
 				disabled={submitting || email.length === 0 || password.length === 0}
-				className="w-full bg-[#FFB211] text-black hover:bg-[#E5A010]"
+				className="w-full"
 			>
 				{submitting ? 'Signing in…' : 'Sign in'}
 			</Button>
@@ -211,14 +209,14 @@ function AccountForm({ next }: { next: string }) {
 				<button
 					type="button"
 					onClick={() => setShowHelp(v => !v)}
-					className="text-muted-foreground hover:text-foreground self-start text-xs underline underline-offset-2"
+					className="text-link focus-fill self-start rounded-sm text-sm underline-offset-2 hover:underline"
 				>
 					Forgot your password?
 				</button>
 				{showHelp && (
-					<div className="text-muted-foreground bg-muted/40 rounded-md border p-3 text-xs leading-relaxed">
+					<div className="text-muted-foreground bg-background rounded-lg border p-3 text-xs">
 						On the server, run{' '}
-						<code className="bg-background rounded px-1 py-0.5 font-mono">
+						<code className="border-control-border rounded border px-1 font-mono">
 							pnpm recovery {email || 'your@email.com'}
 						</code>{' '}
 						to print a temporary password to the console. Sign in with that temporary password above
@@ -236,25 +234,11 @@ function OidcLaunch({ next }: { next: string }) {
 	return (
 		<div className="flex flex-col gap-3">
 			<a href={href} className="contents">
-				<Button className="w-full bg-[#FFB211] text-black hover:bg-[#E5A010]">
-					Continue with single sign-on
-				</Button>
+				<Button className="w-full">Continue with single sign-on</Button>
 			</a>
 			<p className="text-sm text-muted-foreground">
 				You&apos;ll be redirected to your identity provider to complete the sign-in.
 			</p>
-		</div>
-	);
-}
-
-function Notice({ children }: { children: React.ReactNode }) {
-	return (
-		<div
-			role="alert"
-			className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
-		>
-			<AlertCircle className="mt-0.5 size-4 shrink-0" />
-			<div className="space-y-1">{children}</div>
 		</div>
 	);
 }
@@ -270,10 +254,10 @@ function MisconfiguredNotice({ mode }: { mode: AuthMode }) {
 			'MONGONAUT_AUTH_SECRET, MONGONAUT_OIDC_ISSUER, MONGONAUT_OIDC_CLIENT_ID and MONGONAUT_OIDC_CLIENT_SECRET must all be set.';
 	}
 	return (
-		<Notice>
-			<p className="font-medium">Authentication is misconfigured.</p>
+		<Banner variant="error">
+			<p className="font-semibold">Authentication is misconfigured.</p>
 			<p>{detail}</p>
 			<p>Check your container environment variables and restart Mongonaut.</p>
-		</Notice>
+		</Banner>
 	);
 }

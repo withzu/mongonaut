@@ -1,9 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ChevronRightIcon, DatabaseIcon, PlusIcon, SearchIcon, TableIcon } from 'lucide-react';
 import type { Document } from 'mongodb';
 import {
@@ -20,8 +19,10 @@ import {
 	SidebarMenuSkeleton,
 	SidebarMenuSub,
 	SidebarTrigger,
+	useSidebar,
 } from '@/components/ui/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ShortcutKeys } from '@/components/ui/kbd';
 import { Input } from '@/components/ui/input';
 import type { Database } from '@/lib/types/mongo';
 import {
@@ -31,12 +32,17 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { LogoMark } from '@/components/custom/logo-mark';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CreateItemDialog } from '@/components/custom/create-item-dialog';
+import { ShortcutTooltip } from '@/components/custom/shortcut-tooltip';
 import { SidebarFooterActions } from '@/components/custom/sidebar-footer-actions';
 import { CollectionContextMenu } from '@/components/custom/collection-actions';
 import { DatabaseContextMenu } from '@/components/custom/database-context-menu';
 import { cn, formatBytes, formatCount } from '@/lib/utils';
+import { useShortcut } from '@/hooks/use-shortcut';
+import { collectionHref } from '@/hooks/use-recent-collections';
 import { useIsHydrated } from '@/hooks/use-is-hydrated';
 
 const OPEN_DATABASES_KEY = 'openedTables';
@@ -62,6 +68,52 @@ function writeOpenDatabases(names: string[]): void {
 	}
 }
 
+function handleTreeKeys(event: KeyboardEvent<HTMLElement>): void {
+	if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+	if (!(event.target instanceof HTMLElement) || !event.currentTarget.contains(event.target)) return;
+
+	const rows = [
+		...event.currentTarget.querySelectorAll<HTMLElement>('[data-sidebar="menu-button"]'),
+	];
+	const index = rows.indexOf(event.target);
+	if (index === -1) return;
+
+	const row = rows[index];
+	const expanded = row.getAttribute('aria-expanded');
+	const focusParent = () =>
+		rows
+			.slice(0, index)
+			.findLast(candidate => candidate.hasAttribute('aria-expanded'))
+			?.focus();
+
+	switch (event.key) {
+		case 'ArrowDown':
+			rows[index + 1]?.focus();
+			break;
+		case 'ArrowUp':
+			if (index === 0) document.getElementById('sidebar-search')?.focus();
+			else rows[index - 1].focus();
+			break;
+		case 'Home':
+			rows[0].focus();
+			break;
+		case 'End':
+			rows[rows.length - 1].focus();
+			break;
+		case 'ArrowRight':
+			if (expanded === 'false') row.click();
+			else if (expanded === 'true') rows[index + 1]?.focus();
+			break;
+		case 'ArrowLeft':
+			if (expanded === 'true') row.click();
+			else if (expanded === null) focusParent();
+			break;
+		default:
+			return;
+	}
+	event.preventDefault();
+}
+
 interface AppSidebarProps {
 	databases: Database[];
 	totalSize?: number;
@@ -74,20 +126,12 @@ interface AppSidebarProps {
 
 function MobileHeader({ globalReadonly }: { globalReadonly?: boolean }) {
 	return (
-		<div className="flex items-center h-14 px-4 backdrop-blur-sm bg-background/80 border-b">
-			<SidebarTrigger className="size-9" />
+		<div className="bg-sidebar flex h-14 items-center border-b px-4">
+			<SidebarTrigger />
 
 			<div className="ml-3 flex items-center gap-2 flex-grow">
-				<Image
-					src="/images/logo.svg"
-					alt=""
-					aria-hidden="true"
-					className="dark:invert"
-					width={24}
-					height={24}
-					priority
-				/>
-				<span className="font-bold">Mongonaut</span>
+				<LogoMark priority />
+				<span className="font-semibold">Mongonaut</span>
 			</div>
 
 			{globalReadonly && <ReadOnlyBadge />}
@@ -95,12 +139,8 @@ function MobileHeader({ globalReadonly }: { globalReadonly?: boolean }) {
 	);
 }
 
-export function ReadOnlyBadge() {
-	return (
-		<span className="text-primary-foreground rounded-full text-xs bg-primary px-2.5 py-0.5">
-			Read-only
-		</span>
-	);
+function ReadOnlyBadge() {
+	return <Badge>Read-only</Badge>;
 }
 
 function MobileBreadcrumb() {
@@ -116,7 +156,7 @@ function MobileBreadcrumb() {
 			<BreadcrumbList>
 				<BreadcrumbItem>
 					<BreadcrumbPage className="flex gap-2">
-						<DatabaseIcon size={12} className="text-muted-foreground my-auto" />
+						<DatabaseIcon size={16} className="text-muted-foreground my-auto" />
 						{database}
 					</BreadcrumbPage>
 				</BreadcrumbItem>
@@ -126,7 +166,7 @@ function MobileBreadcrumb() {
 						<BreadcrumbSeparator />
 						<BreadcrumbItem>
 							<BreadcrumbPage className="flex gap-2">
-								<TableIcon size={12} className="text-muted-foreground my-auto" />
+								<TableIcon size={16} className="text-muted-foreground my-auto" />
 								{collection}
 							</BreadcrumbPage>
 						</BreadcrumbItem>
@@ -157,7 +197,7 @@ function ServerFacts({ serverInfo, totalSize }: { serverInfo: Document; totalSiz
 	if (facts.length === 0) return null;
 
 	return (
-		<div className="grid gap-2 px-2 border-b pb-3 text-xs">
+		<div className="grid gap-2 pb-1 text-xs">
 			<dl className="flex justify-between gap-2">
 				<div className="text-muted-foreground">
 					{facts.map(fact => (
@@ -186,6 +226,23 @@ export function AppSidebar({
 	const [search, setSearch] = useState('');
 	const [isCreateOpen, setCreateOpen] = useState(false);
 	const hydrated = useIsHydrated();
+	const router = useRouter();
+	const treeRef = useRef<HTMLUListElement>(null);
+	const { setOpen, setOpenMobile, isMobile } = useSidebar();
+
+	useShortcut('create', () => setCreateOpen(true), canCreateDatabase && !globalReadonly);
+	useShortcut('search', () => {
+		if (isMobile) setOpenMobile(true);
+		else setOpen(true);
+		// The sidebar may only just be appearing.
+		setTimeout(() => {
+			const field = document.getElementById('sidebar-search');
+			if (field instanceof HTMLInputElement) {
+				field.focus();
+				field.select();
+			}
+		});
+	});
 
 	const [toggled, setToggled] = useState<Record<string, boolean>>({});
 	const persistedOpen = useMemo(() => (hydrated ? readOpenDatabases() : []), [hydrated]);
@@ -209,13 +266,36 @@ export function AppSidebar({
 			database.collections.some(collection => collection.name.toLowerCase().includes(searchTerm)),
 	);
 
+	const handleSearchKeys = (event: KeyboardEvent<HTMLInputElement>) => {
+		if (event.nativeEvent.isComposing) return;
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			treeRef.current?.querySelector<HTMLElement>('[data-sidebar="menu-button"]')?.focus();
+		} else if (event.key === 'Enter' && searchTerm) {
+			const matches = filteredDatabases.flatMap(database =>
+				database.collections.map(collection => ({ database, collection })),
+			);
+			const match =
+				matches.find(({ collection }) => collection.name.toLowerCase().includes(searchTerm)) ??
+				matches[0];
+			if (match) {
+				event.currentTarget.blur();
+				setOpenMobile(false);
+				router.push(collectionHref(match.database.name, match.collection.name));
+			}
+		} else if (event.key === 'Escape' && !isMobile) {
+			if (search) setSearch('');
+			else event.currentTarget.blur();
+		}
+	};
+
 	return (
 		<>
 			<div className="fixed top-0 left-0 right-0 z-50 md:hidden">
 				<div className="flex flex-col">
 					<MobileHeader globalReadonly={globalReadonly} />
 
-					<div className="flex items-center h-12 px-4 backdrop-blur-sm bg-background/80 border-b">
+					<div className="bg-sidebar flex h-12 items-center border-b px-4">
 						<div className="w-full overflow-x-auto no-scrollbar">
 							<MobileBreadcrumb />
 						</div>
@@ -224,56 +304,57 @@ export function AppSidebar({
 			</div>
 
 			<Sidebar side="left" collapsible="offcanvas">
-				<div className="flex h-11 shrink-0 items-center px-2">
-					<Link href="/" className="flex items-center gap-2">
-						<Image
-							src="/images/logo.svg"
-							alt=""
-							aria-hidden="true"
-							className="dark:invert"
-							width={30}
-							height={30}
-							priority
-						/>
-						<span className="text-sm font-semibold tracking-tight">Mongonaut</span>
+				<div className="flex h-(--mgn-height-header) shrink-0 items-center px-4">
+					<Link href="/" className="focus-row flex items-center gap-1.5 rounded-md">
+						<span className="flex w-4 justify-center">
+							<LogoMark priority />
+						</span>
+						<span className="text-sm font-semibold">Mongonaut</span>
 					</Link>
 				</div>
 
-				<SidebarHeader>
-					<div className="relative mx-1.5">
+				<SidebarHeader className="pt-0">
+					<div className="relative">
 						<Input
 							id="sidebar-search"
 							type="search"
 							aria-label="Search databases and collections"
 							placeholder="Search databases & collections..."
-							className="bg-background dark:bg-background h-10 pl-8 md:h-8"
+							className="peer pr-8 pl-7.5 [&::-webkit-search-cancel-button]:hidden"
 							value={search}
 							onChange={e => setSearch(e.target.value)}
+							onKeyDown={handleSearchKeys}
+							aria-keyshortcuts="/"
 						/>
-						<div className="absolute left-0 top-0 p-2.5">
-							<SearchIcon size={14} className="text-muted-foreground" aria-hidden="true" />
+						<div className="pointer-events-none absolute inset-y-0 left-2 flex items-center">
+							<SearchIcon size={16} className="text-muted-foreground" aria-hidden="true" />
+						</div>
+						<div className="pointer-events-none absolute inset-y-0 right-1 flex items-center peer-focus:hidden">
+							<ShortcutKeys id="search" />
 						</div>
 					</div>
 				</SidebarHeader>
 
-				<SidebarContent className="gap-4 md:gap-2">
+				<SidebarContent>
 					<SidebarGroup>
 						<SidebarGroupLabel className="flex justify-between items-center">
 							Databases
 							{canCreateDatabase && (
-								<Button
-									variant="ghost"
-									size="icon"
-									className="h-6 w-6"
-									aria-label="Create database or collection"
-									onClick={() => setCreateOpen(true)}
-								>
-									<PlusIcon size={14} />
-								</Button>
+								<ShortcutTooltip id="create">
+									<Button
+										variant="ghost"
+										size="icon"
+										className="-mr-1.5"
+										aria-label="Create database or collection"
+										onClick={() => setCreateOpen(true)}
+									>
+										<PlusIcon size={16} />
+									</Button>
+								</ShortcutTooltip>
 							)}
 						</SidebarGroupLabel>
 						<SidebarGroupContent>
-							<SidebarMenu className="gap-2 md:gap-1">
+							<SidebarMenu ref={treeRef} onKeyDown={handleTreeKeys}>
 								{loading && databases.length === 0 ? (
 									<>
 										<SidebarMenuSkeleton showIcon />
@@ -293,7 +374,7 @@ export function AppSidebar({
 										/>
 									))
 								) : (
-									<SidebarMenuItem className="border border-dashed px-2 py-4 rounded">
+									<SidebarMenuItem className="rounded-lg border border-dashed p-3">
 										<p className="text-muted-foreground text-xs">
 											{databases.length === 0
 												? 'No databases visible for this account'
@@ -306,7 +387,7 @@ export function AppSidebar({
 					</SidebarGroup>
 				</SidebarContent>
 
-				<SidebarFooter className="p-4 md:p-2">
+				<SidebarFooter className="border-t px-4 py-3">
 					{serverInfo && <ServerFacts serverInfo={serverInfo} totalSize={totalSize} />}
 
 					<SidebarFooterActions readOnly={globalReadonly} isAccountAdmin={isAccountAdmin} />
@@ -318,7 +399,7 @@ export function AppSidebar({
 	);
 }
 
-export function CollapsibleDatabaseSidebarItem({
+function CollapsibleDatabaseSidebarItem({
 	database,
 	databases,
 	search,
@@ -360,11 +441,11 @@ export function CollapsibleDatabaseSidebarItem({
 					canDropDatabase={canCreateDatabase}
 				>
 					<CollapsibleTrigger asChild>
-						<SidebarMenuButton className="font-medium">
+						<SidebarMenuButton className="group/row">
 							<ChevronRightIcon className="text-muted-foreground transition-transform" />
 							<DatabaseIcon className="text-muted-foreground" />
 							<span className="truncate">{database.name}</span>
-							<span className="text-muted-foreground ml-auto text-[11px] tabular-nums">
+							<span className="text-muted-foreground group-hover/row:text-selection-secondary ml-auto text-xs tabular-nums">
 								{formatBytes(database.totalSize)}
 							</span>
 						</SidebarMenuButton>
@@ -374,7 +455,7 @@ export function CollapsibleDatabaseSidebarItem({
 				<CollapsibleContent>
 					<SidebarMenuSub>
 						{filteredCollections.map(collection => {
-							const href = `/${encodeURIComponent(database.name)}/${encodeURIComponent(collection.name)}`;
+							const href = collectionHref(database.name, collection.name);
 							const isActive = currentPath === `/${database.name}/${collection.name}`;
 							return (
 								<CollectionContextMenu
@@ -384,22 +465,24 @@ export function CollapsibleDatabaseSidebarItem({
 									readOnly={!collection.canWrite}
 								>
 									{/* A real link so collections can be opened in a new tab. */}
-									<SidebarMenuButton isActive={isActive} asChild>
+									<SidebarMenuButton isActive={isActive} className="group/row pl-11.5" asChild>
 										<Link href={href}>
-											<TableIcon className={isActive ? '' : 'text-muted-foreground'} />
+											<TableIcon
+												className={isActive ? 'text-selection-secondary' : 'text-muted-foreground'}
+											/>
 											<span className="truncate">{collection.name}</span>
 											<span
 												className={cn(
-													'ml-auto flex shrink-0 items-center gap-1 text-[11px] tabular-nums',
-													isActive ? 'text-sidebar-accent-foreground' : 'text-muted-foreground',
+													'ml-auto flex shrink-0 items-center gap-1 text-xs tabular-nums',
+													isActive
+														? 'text-selection-secondary'
+														: 'text-muted-foreground group-hover/row:text-selection-secondary',
 												)}
 											>
 												{collection.documentCount !== null && (
 													<>
 														<span>{formatCount(collection.documentCount)}</span>
-														<span aria-hidden="true" className="opacity-60">
-															/
-														</span>
+														<span aria-hidden="true">/</span>
 													</>
 												)}
 												<span>{formatBytes(collection.totalSize)}</span>

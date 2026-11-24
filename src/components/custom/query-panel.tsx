@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { CodeIcon, PlayIcon, PlusIcon, TablePropertiesIcon, XIcon } from 'lucide-react';
 import { toast } from 'sonner';
@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LazyJsonEditor, preloadJsonEditor } from '@/components/custom/lazy-json-editor';
+import { ShortcutTooltip } from '@/components/custom/shortcut-tooltip';
+import { useShortcut } from '@/hooks/use-shortcut';
 import { escapeRegex } from '@/lib/utils';
 
 type QueryMode = 'find' | 'aggregate';
@@ -150,6 +152,8 @@ export function QueryPanel({
 }: QueryPanelProps) {
 	const router = useRouter();
 	const sortFieldId = useId();
+	const panelRef = useRef<HTMLDivElement>(null);
+	const [mode, setMode] = useState<QueryMode>(defaultMode);
 
 	const hasInitialFilter = !!defaultFilter && defaultFilter !== '{}';
 	const [findInput, setFindInput] = useState<FindInput>(hasInitialFilter ? 'json' : 'builder');
@@ -272,7 +276,6 @@ export function QueryPanel({
 
 	const toggleFindInput = () => {
 		if (findInput === 'builder') {
-			// Seed the JSON editor with the compiled builder filter.
 			const filter = buildFilter(rows);
 			setFilterJson(JSON.stringify(filter, null, 2));
 			setFindInput('json');
@@ -281,10 +284,32 @@ export function QueryPanel({
 		}
 	};
 
+	useShortcut('run-query', () => {
+		if (mode === 'find') {
+			runFind();
+			return;
+		}
+		// A pipeline can write, so it only runs while its editor has focus.
+		if (!panelRef.current?.contains(document.activeElement)) return false;
+		if (!isRunningPipeline) void runAggregate();
+	});
+
+	useShortcut('focus-query', () => {
+		const field = panelRef.current?.querySelector<HTMLElement>(
+			'[role="tabpanel"][data-state="active"] :is(.cm-content, input)',
+		);
+		field?.focus();
+		field?.scrollIntoView({ block: 'nearest' });
+	});
+
+	const runOnEnter = (event: KeyboardEvent) => {
+		if (event.key === 'Enter' && !event.nativeEvent.isComposing) runFind();
+	};
+
 	return (
-		<div className="rounded-lg border bg-muted/20">
-			<Tabs defaultValue={defaultMode} className="w-full">
-				<div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+		<div ref={panelRef} className="bg-chrome overflow-hidden rounded-lg border">
+			<Tabs value={mode} onValueChange={value => setMode(value as QueryMode)} className="w-full">
+				<div className="flex items-center justify-between gap-2 border-b pr-2">
 					<TabsList>
 						<TabsTrigger value="find">Find</TabsTrigger>
 						<TabsTrigger
@@ -295,15 +320,15 @@ export function QueryPanel({
 							Aggregate
 						</TabsTrigger>
 					</TabsList>
-					<Button variant="ghost" size="sm" onClick={clearQuery} className="text-muted-foreground">
+					<Button variant="ghost" size="sm" onClick={clearQuery}>
 						<XIcon size={14} />
 						Clear
 					</Button>
 				</div>
 
-				<TabsContent value="find" className="space-y-3 p-3">
+				<TabsContent value="find" className="space-y-2 p-3">
 					<div className="flex items-center justify-between">
-						<span className="text-xs font-medium text-muted-foreground">Filter</span>
+						<span className="text-sm text-muted-foreground">Filter</span>
 						<Button
 							variant="ghost"
 							size="sm"
@@ -334,6 +359,7 @@ export function QueryPanel({
 										placeholder="field (e.g. user.age)"
 										value={row.field}
 										onChange={e => updateRow(index, { field: e.target.value })}
+										onKeyDown={runOnEnter}
 										className="min-w-0 flex-1"
 									/>
 									<Select
@@ -365,7 +391,7 @@ export function QueryPanel({
 										}
 										value={row.value}
 										onChange={e => updateRow(index, { value: e.target.value })}
-										onKeyDown={e => e.key === 'Enter' && runFind()}
+										onKeyDown={runOnEnter}
 										className="min-w-0 flex-1"
 									/>
 									<Button
@@ -392,7 +418,7 @@ export function QueryPanel({
 							</div>
 						</div>
 					) : (
-						<div className="overflow-hidden rounded-md border">
+						<div className="border-control-border overflow-hidden rounded-md border">
 							<LazyJsonEditor
 								value={filterJson}
 								height="140px"
@@ -400,7 +426,6 @@ export function QueryPanel({
 									setFilterJson(value);
 									if (filterError) setFilterError(null);
 								}}
-								lightTheme="default"
 								basicSetup={{ lineNumbers: true, foldGutter: false }}
 							/>
 						</div>
@@ -413,7 +438,7 @@ export function QueryPanel({
 					)}
 
 					<div className="flex flex-wrap items-center gap-2">
-						<label htmlFor={sortFieldId} className="text-xs font-medium text-muted-foreground">
+						<label htmlFor={sortFieldId} className="text-sm text-muted-foreground">
 							Sort
 						</label>
 						<Input
@@ -421,7 +446,8 @@ export function QueryPanel({
 							placeholder="field"
 							value={sortField}
 							onChange={e => setSortField(e.target.value)}
-							className="h-9 w-48"
+							onKeyDown={runOnEnter}
+							className="w-48"
 						/>
 						<Select value={sortDirection} onValueChange={setSortDirection}>
 							<SelectTrigger className="w-32" aria-label="Sort direction">
@@ -432,16 +458,18 @@ export function QueryPanel({
 								<SelectItem value="-1">Descending</SelectItem>
 							</SelectContent>
 						</Select>
-						<Button onClick={runFind} className="ml-auto">
-							<PlayIcon size={14} />
-							Run find
-						</Button>
+						<ShortcutTooltip id="run-query">
+							<Button onClick={runFind} className="ml-auto">
+								<PlayIcon size={14} />
+								Run find
+							</Button>
+						</ShortcutTooltip>
 					</div>
 				</TabsContent>
 
-				<TabsContent value="aggregate" className="space-y-3 p-3">
-					<span className="text-xs font-medium text-muted-foreground">Aggregation pipeline</span>
-					<div className="overflow-hidden rounded-md border">
+				<TabsContent value="aggregate" className="space-y-2 p-3">
+					<p className="text-sm text-muted-foreground">Aggregation pipeline</p>
+					<div className="border-control-border overflow-hidden rounded-md border">
 						<LazyJsonEditor
 							value={pipelineJson}
 							height="200px"
@@ -449,7 +477,6 @@ export function QueryPanel({
 								setPipelineJson(value);
 								if (pipelineError) setPipelineError(null);
 							}}
-							lightTheme="default"
 							basicSetup={{ lineNumbers: true, foldGutter: true }}
 						/>
 					</div>
@@ -457,10 +484,12 @@ export function QueryPanel({
 						<span role="alert" className="text-destructive text-xs">
 							{pipelineError}
 						</span>
-						<Button onClick={runAggregate} disabled={isRunningPipeline}>
-							<PlayIcon size={14} />
-							Run aggregation
-						</Button>
+						<ShortcutTooltip id="run-query" label="Run from inside the editor">
+							<Button onClick={runAggregate} disabled={isRunningPipeline}>
+								<PlayIcon size={14} />
+								Run aggregation
+							</Button>
+						</ShortcutTooltip>
 					</div>
 				</TabsContent>
 			</Tabs>

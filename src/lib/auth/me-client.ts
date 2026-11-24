@@ -17,7 +17,3 @@ export function fetchAuthMe(): Promise<AuthMeResponse | null> {
 
 	return pending;
 }
-
-export function invalidateAuthMe(): void {
-	pending = null;
-}

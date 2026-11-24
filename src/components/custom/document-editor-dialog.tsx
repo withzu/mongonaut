@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { addDocuments, updateDocument } from '@/actions/databaseOperation';
+import { ShortcutTooltip } from '@/components/custom/shortcut-tooltip';
+import { useShortcut } from '@/hooks/use-shortcut';
 import {
 	isValidJson,
 	JsonCodeEditor,
@@ -33,6 +35,7 @@ interface DocumentEditorDialogProps {
 	documentIdJson?: string | null;
 	/** Fingerprint of the document as it was loaded, used to detect a concurrent write. */
 	revision?: string;
+	onCloseAutoFocus?: (event: Event) => void;
 }
 
 const COPY: Record<DocumentEditorMode, { title: string; submit: string }> = {
@@ -51,6 +54,7 @@ export function DocumentEditorDialog({
 	initialValue,
 	documentIdJson,
 	revision,
+	onCloseAutoFocus,
 }: DocumentEditorDialogProps) {
 	const router = useRouter();
 	const [jsonInput, setJsonInput] = useState(initialValue);
@@ -133,10 +137,19 @@ export function DocumentEditorDialog({
 	};
 
 	const copy = COPY[mode];
+	const canSubmit = !isSaving && isValid && (mode === 'create' || isDirty);
+
+	useShortcut(
+		'save',
+		() => {
+			if (canSubmit) void handleSubmit();
+		},
+		open,
+	);
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-4xl">
+			<DialogContent className="sm:max-w-4xl" onCloseAutoFocus={onCloseAutoFocus}>
 				<DialogHeader>
 					<DialogTitle>{copy.title}</DialogTitle>
 					<DialogDescription>
@@ -148,15 +161,21 @@ export function DocumentEditorDialog({
 
 				<p className="text-muted-foreground text-xs">
 					Values use MongoDB Extended JSON, so types are preserved:{' '}
-					<code className="bg-muted rounded px-1 py-0.5 font-mono">{'{ "$oid": "…" }'}</code> for an
-					ObjectId,{' '}
-					<code className="bg-muted rounded px-1 py-0.5 font-mono">{'{ "$date": "…" }'}</code> for a
-					date,{' '}
-					<code className="bg-muted rounded px-1 py-0.5 font-mono">{'{ "$numberLong": "…" }'}</code>{' '}
+					<code className="border-control-border text-foreground rounded border px-1 font-mono whitespace-nowrap">
+						{'{ "$oid": "…" }'}
+					</code>{' '}
+					for an ObjectId,{' '}
+					<code className="border-control-border text-foreground rounded border px-1 font-mono whitespace-nowrap">
+						{'{ "$date": "…" }'}
+					</code>{' '}
+					for a date,{' '}
+					<code className="border-control-border text-foreground rounded border px-1 font-mono whitespace-nowrap">
+						{'{ "$numberLong": "…" }'}
+					</code>{' '}
 					for a 64-bit integer.
 				</p>
 
-				<div className="h-[500px] border rounded-md overflow-hidden">
+				<div className="border-control-border h-[500px] overflow-hidden rounded-md border">
 					<JsonCodeEditor value={jsonInput} onChange={setJsonInput} />
 				</div>
 
@@ -189,18 +208,16 @@ export function DocumentEditorDialog({
 								</>
 							)}
 						</div>
-						<div className="flex gap-2">
+						<div className="flex gap-3">
 							<Button variant="outline" onClick={() => onOpenChange(false)}>
 								Cancel
 							</Button>
-							<Button
-								onClick={handleSubmit}
-								disabled={isSaving || !isValid || (mode === 'edit' && !isDirty)}
-								className="min-w-[120px]"
-							>
-								{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-								{copy.submit}
-							</Button>
+							<ShortcutTooltip id="save">
+								<Button onClick={handleSubmit} disabled={!canSubmit} className="min-w-[7.5rem]">
+									{isSaving && <Loader2 className="animate-spin" />}
+									{copy.submit}
+								</Button>
+							</ShortcutTooltip>
 						</div>
 					</div>
 				</DialogFooter>

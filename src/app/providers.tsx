@@ -13,7 +13,7 @@ const Providers: FC<ProvidersProps> = ({ children }): ReactElement => (
 	<GlobalErrorBoundary>
 		<ThemeProvider attribute="class">
 			{children}
-			<Toaster richColors />
+			<Toaster />
 		</ThemeProvider>
 	</GlobalErrorBoundary>
 );

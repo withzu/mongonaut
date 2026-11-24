@@ -45,13 +45,6 @@ function getJwks(jwksUri: string) {
 	return set;
 }
 
-export interface AuthorizationRequest {
-	url: string;
-	state: string;
-	nonce: string;
-	codeVerifier: string;
-}
-
 export async function buildAuthorizationUrl(
 	cfg: OidcConfig,
 	redirectUri: string,
@@ -148,8 +141,6 @@ export async function verifyIdToken(
 }
 
 /**
- * Check the optional email allowlist.
- *
  * When an allowlist is configured the address has to be verified by the
  * provider. Otherwise an identity provider that lets users choose an arbitrary
  * unverified email would let anyone claim an allowlisted address.

@@ -7,7 +7,7 @@ const importCore = () => import('@/components/custom/json-editor-core');
 
 const JsonEditorCore = dynamic(importCore, {
 	ssr: false,
-	loading: () => <div className="bg-muted/40 h-full w-full animate-pulse" />,
+	loading: () => <div className="bg-hover h-full w-full animate-pulse" />,
 });
 
 export function preloadJsonEditor(): void {

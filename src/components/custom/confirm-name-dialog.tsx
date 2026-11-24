@@ -50,8 +50,8 @@ export function ConfirmNameDialog({
 					<AlertDialogDescription>{description}</AlertDialogDescription>
 				</AlertDialogHeader>
 
-				<div className="flex flex-col gap-2">
-					<label htmlFor={inputId} className="text-sm font-medium">
+				<div className="flex flex-col gap-1.5">
+					<label htmlFor={inputId} className="text-sm">
 						Type <span className="font-mono">{expectedName}</span> to confirm
 					</label>
 					<Input
@@ -66,6 +66,7 @@ export function ConfirmNameDialog({
 				<AlertDialogFooter>
 					<AlertDialogCancel>Cancel</AlertDialogCancel>
 					<AlertDialogAction
+						variant="destructive"
 						onClick={event => {
 							if (!matches) {
 								event.preventDefault();

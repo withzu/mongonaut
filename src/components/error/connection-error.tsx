@@ -6,25 +6,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 export function ConnectionError({ error }: { error: string }) {
 	return (
-		<div className="flex-1 flex items-center justify-center p-4" role="alert">
-			<Card className="w-full max-w-md mx-auto border-destructive/50">
+		<div className="bg-background flex flex-1 items-center justify-center p-4" role="alert">
+			<Card className="w-full max-w-md mx-auto">
 				<CardHeader>
 					<div className="flex items-center gap-2">
-						<AlertCircle className="h-5 w-5 text-destructive" />
+						<AlertCircle className="text-danger-mark size-5" />
 						<CardTitle>Could not reach MongoDB</CardTitle>
 					</div>
 					<CardDescription>Mongonaut could not read the database list.</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-4">
-					<Card className="bg-muted/50">
+					<Card className="bg-background rounded-md py-0">
 						<CardContent className="p-3">
 							<code className="text-xs text-foreground font-mono break-all">{error}</code>
 						</CardContent>
 					</Card>
 
-					<div className="text-sm text-muted-foreground">
+					<div className="text-muted-foreground text-sm leading-paragraph">
 						<p>Please check:</p>
-						<ul className="list-disc list-inside mt-2 space-y-1">
+						<ul className="mt-2 list-disc space-y-1 pl-5">
 							<li>
 								<code className="font-mono text-xs">MONGO_CONNECTION_URL</code> points at the right
 								host and is reachable from inside the container
@@ -35,12 +35,8 @@ export function ConnectionError({ error }: { error: string }) {
 						</ul>
 					</div>
 
-					<Button
-						variant="default"
-						className="w-full cursor-pointer"
-						onClick={() => window.location.reload()}
-					>
-						<RefreshCw className="mr-2 h-4 w-4" />
+					<Button variant="default" className="w-full" onClick={() => window.location.reload()}>
+						<RefreshCw className="size-4" />
 						Try again
 					</Button>
 				</CardContent>

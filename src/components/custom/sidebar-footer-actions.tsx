@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { InfoIcon, KeyRoundIcon, LogOutIcon, MoonIcon, SettingsIcon, SunIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChangePasswordDialog } from '@/components/custom/change-password-dialog';
 import { getAvailableUpdate } from '@/actions/updateCheck';
@@ -12,25 +13,30 @@ import { fetchAuthMe, type AuthMeResponse } from '@/lib/auth/me-client';
 import type { AvailableUpdate } from '@/lib/update-check';
 import { cn } from '@/lib/utils';
 
-export function ThemeToggle({ className }: { className?: string }) {
+function ThemeToggle({ className }: { className?: string }) {
 	const { setTheme } = useTheme();
 	const theme = usePreferredTheme();
 
 	return (
-		<div className={cn('bg-muted inline-flex items-center gap-0.5 rounded-lg p-0.5', className)}>
+		<div
+			className={cn(
+				'border-control-border inline-flex h-(--mgn-height-control) items-stretch rounded-md border',
+				className,
+			)}
+		>
 			<ThemeToggleButton
 				label="Light mode"
 				active={theme === 'light'}
 				onClick={() => setTheme('light')}
 			>
-				<SunIcon size={15} />
+				<SunIcon size={16} />
 			</ThemeToggleButton>
 			<ThemeToggleButton
 				label="Dark mode"
 				active={theme === 'dark'}
 				onClick={() => setTheme('dark')}
 			>
-				<MoonIcon size={15} />
+				<MoonIcon size={16} />
 			</ThemeToggleButton>
 		</div>
 	);
@@ -54,10 +60,10 @@ function ThemeToggleButton({
 			aria-pressed={active}
 			onClick={onClick}
 			className={cn(
-				'flex size-7 cursor-pointer items-center justify-center rounded-md transition-colors',
+				'focus-field -m-px flex w-8 items-center justify-center rounded-md border transition-colors',
 				active
-					? 'bg-background text-foreground shadow-sm'
-					: 'text-muted-foreground hover:text-foreground',
+					? 'border-control-border-pressed bg-control text-foreground'
+					: 'text-muted-foreground hover:text-foreground border-transparent',
 			)}
 		>
 			{children}
@@ -101,7 +107,7 @@ export function SidebarFooterActions({
 				href="https://thezucompany.com"
 				target="_blank"
 				aria-label="The Zu Company"
-				className="flex shrink-0 items-center opacity-80 transition-opacity hover:opacity-100"
+				className="-ml-[3px] flex shrink-0 items-center opacity-80 transition-opacity hover:opacity-100"
 			>
 				{/* oxlint-disable-next-line nextjs/no-img-element */}
 				<img src="/images/zu/logo.svg" alt="The Zu Company" className="h-5 w-auto dark:hidden" />
@@ -114,16 +120,12 @@ export function SidebarFooterActions({
 			</Link>
 
 			<div className="ml-auto flex items-center gap-1">
-				{readOnly && (
-					<span className="text-primary-foreground bg-primary rounded-full px-2.5 py-0.5 text-xs">
-						Read-only
-					</span>
-				)}
+				{readOnly && <Badge>Read-only</Badge>}
 
 				{isAccountAdmin && (
 					<Button size="icon" variant="ghost" aria-label="Accounts and settings" asChild>
 						<Link href="/admin" prefetch={false}>
-							<SettingsIcon size={18} />
+							<SettingsIcon size={16} />
 						</Link>
 					</Button>
 				)}
@@ -139,11 +141,11 @@ export function SidebarFooterActions({
 					asChild
 				>
 					<Link href="/about" prefetch={false}>
-						<InfoIcon size={18} />
+						<InfoIcon size={16} />
 						{update && (
 							<span
 								aria-hidden="true"
-								className="bg-brand ring-sidebar absolute top-1.5 right-1.5 size-1.5 rounded-full ring-2"
+								className="bg-brand ring-sidebar absolute top-0.5 right-0.5 size-1.5 rounded-full ring-2"
 							/>
 						)}
 					</Link>
@@ -156,7 +158,7 @@ export function SidebarFooterActions({
 						aria-label="Change password"
 						onClick={() => setShowChangePassword(true)}
 					>
-						<KeyRoundIcon size={18} />
+						<KeyRoundIcon size={16} />
 					</Button>
 				)}
 
@@ -169,7 +171,7 @@ export function SidebarFooterActions({
 							aria-label="Sign out"
 							title={userLabel}
 						>
-							<LogOutIcon size={18} />
+							<LogOutIcon size={16} />
 						</Button>
 					</form>
 				)}

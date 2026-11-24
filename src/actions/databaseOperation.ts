@@ -87,10 +87,6 @@ async function mapLimited<T, R>(
 	return results;
 }
 
-// ---------------------------------------------------------------------------
-// Instance information
-// ---------------------------------------------------------------------------
-
 export const getServerInfo = async (): Promise<ActionResult<Document>> => {
 	const guard = await requireAnyAccess();
 	if (!guard.allowed) return failure(guard.error);
@@ -210,10 +206,6 @@ export const collectionExists = async (database: string, collection: string): Pr
 	const result = await mongo.collectionExists(database, collection);
 	return result.success && result.data;
 };
-
-// ---------------------------------------------------------------------------
-// Reading documents
-// ---------------------------------------------------------------------------
 
 export interface DocumentEnvelope {
 	json: string;
@@ -426,10 +418,6 @@ export const exportCollection = async (
 	});
 };
 
-// ---------------------------------------------------------------------------
-// Writing documents
-// ---------------------------------------------------------------------------
-
 /**
  * Runs a pipeline that writes with $out or $merge. This is the only way such a
  * pipeline executes: as a server action it needs a same-origin POST, which a
@@ -612,10 +600,6 @@ export const deleteAllDocuments = async (
 	return result;
 };
 
-// ---------------------------------------------------------------------------
-// Collections and databases
-// ---------------------------------------------------------------------------
-
 export const createCollection = async (
 	database: string,
 	collection: string,
@@ -788,10 +772,6 @@ export const dropDatabase = async (database: string): Promise<ActionResult> => {
 	});
 	return result.success ? success(undefined) : result;
 };
-
-// ---------------------------------------------------------------------------
-// Indexes
-// ---------------------------------------------------------------------------
 
 export const listIndexes = async (
 	database: string,

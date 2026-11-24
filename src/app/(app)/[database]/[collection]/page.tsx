@@ -1,12 +1,5 @@
 import { FC } from 'react';
-import {
-	BoxIcon,
-	DatabaseIcon,
-	FilterXIcon,
-	HardDriveIcon,
-	TableIcon,
-	TriangleAlertIcon,
-} from 'lucide-react';
+import { BoxIcon, DatabaseIcon, FilterXIcon, HardDriveIcon, TableIcon } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import {
 	Breadcrumb,
@@ -15,6 +8,7 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Banner } from '@/components/ui/banner';
 import { AppContainer } from '@/components/custom/app-container';
 import {
 	collectionExists,
@@ -27,6 +21,7 @@ import { DocumentView } from '@/components/custom/document-view';
 import { QueryPanel } from '@/components/custom/query-panel';
 import { CollectionActionsMenu } from '@/components/custom/collection-actions';
 import { PaginationControls } from '@/components/custom/pagination-controls';
+import { DocumentShortcuts } from '@/components/custom/document-shortcuts';
 import { AddDocumentButton } from '@/components/custom/add-document-button';
 import { formatBytes, formatCount } from '@/lib/utils';
 
@@ -86,19 +81,20 @@ const CollectionDetailPage: FC<Props> = async ({ params, searchParams }) => {
 
 	return (
 		<AppContainer>
-			<div className="hidden md:flex items-center justify-between gap-2">
+			<DocumentShortcuts />
+			<div className="hidden min-h-(--mgn-height-control-slim) items-center justify-between gap-2 md:flex">
 				<Breadcrumb>
 					<BreadcrumbList>
 						<BreadcrumbItem>
-							<BreadcrumbPage className="flex gap-2">
-								<DatabaseIcon size={12} className="text-muted-foreground my-auto" />
+							<BreadcrumbPage className="flex gap-1.5">
+								<DatabaseIcon size={16} className="text-muted-foreground my-auto" />
 								{database}
 							</BreadcrumbPage>
 						</BreadcrumbItem>
 						<BreadcrumbSeparator />
 						<BreadcrumbItem>
 							<BreadcrumbPage className="flex gap-2">
-								<TableIcon size={12} className="text-muted-foreground my-auto" />
+								<TableIcon size={16} className="text-muted-foreground my-auto" />
 								{collection}
 							</BreadcrumbPage>
 						</BreadcrumbItem>
@@ -108,26 +104,26 @@ const CollectionDetailPage: FC<Props> = async ({ params, searchParams }) => {
 				<CollectionActionsMenu database={database} collection={collection} readOnly={isReadonly} />
 			</div>
 
-			<div className="w-full h-full flex flex-col gap-4">
+			<div className="flex h-full w-full flex-col gap-3">
 				{stats && (
-					<div className="w-full flex flex-wrap items-center gap-6 px-4 py-3 bg-muted/30 rounded-lg text-sm">
+					<div className="bg-chrome flex w-full flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border px-3 py-2 text-sm">
 						<div className="flex items-center gap-2">
-							<DatabaseIcon size={14} className="text-primary" />
+							<DatabaseIcon size={16} className="text-muted-foreground" />
 							<span className="text-muted-foreground">Documents:</span>
-							<span className="font-medium">{formatCount(stats.count)}</span>
+							<span className="font-semibold tabular-nums">{formatCount(stats.count)}</span>
 						</div>
 
 						<div className="flex items-center gap-2">
-							<HardDriveIcon size={14} className="text-primary" />
+							<HardDriveIcon size={16} className="text-muted-foreground" />
 							<span className="text-muted-foreground">Size:</span>
-							<span className="font-medium">{formatBytes(stats.size)}</span>
+							<span className="font-semibold tabular-nums">{formatBytes(stats.size)}</span>
 						</div>
 
 						{stats.avgObjSize > 0 && (
 							<div className="flex items-center gap-2">
-								<BoxIcon size={14} className="text-primary" />
+								<BoxIcon size={16} className="text-muted-foreground" />
 								<span className="text-muted-foreground">Avg. Size:</span>
-								<span className="font-medium">{formatBytes(stats.avgObjSize)}</span>
+								<span className="font-semibold tabular-nums">{formatBytes(stats.avgObjSize)}</span>
 							</div>
 						)}
 
@@ -153,14 +149,10 @@ const CollectionDetailPage: FC<Props> = async ({ params, searchParams }) => {
 				{!isReadonly && <AddDocumentButton database={database} collection={collection} />}
 
 				{queryError ? (
-					<div
-						role="alert"
-						className="flex flex-col items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 py-10 text-center"
-					>
-						<TriangleAlertIcon className="mb-3 h-12 w-12 text-destructive" />
-						<h3 className="mb-1 font-medium">Query failed</h3>
-						<p className="max-w-xl text-sm text-muted-foreground break-words">{queryError}</p>
-					</div>
+					<Banner variant="error">
+						<p className="font-semibold">Query failed</p>
+						<p>{queryError}</p>
+					</Banner>
 				) : (content?.documents.length || 0) > 0 ? (
 					content!.documents.map((entry, index) => (
 						<DocumentView
@@ -174,9 +166,9 @@ const CollectionDetailPage: FC<Props> = async ({ params, searchParams }) => {
 						/>
 					))
 				) : (
-					<div className="flex flex-col items-center justify-center py-10 text-center border rounded-lg">
-						<FilterXIcon className="w-12 h-12 mb-3 text-muted-foreground" />
-						<h3 className="mb-1 font-medium">No results found</h3>
+					<div className="flex flex-col items-center justify-center rounded-lg border py-10 text-center">
+						<FilterXIcon className="text-muted-foreground mb-3 size-8" />
+						<h3 className="mb-1 font-semibold">No results found</h3>
 						<p className="text-sm text-muted-foreground">
 							{mode === 'aggregate'
 								? 'The aggregation pipeline returned no documents'

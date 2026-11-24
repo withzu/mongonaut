@@ -144,7 +144,7 @@ function IndexList({
 
 	if (result.data.length === 0) {
 		return (
-			<p className="text-muted-foreground rounded-md border border-dashed px-3 py-3 text-xs">
+			<p className="text-muted-foreground rounded-lg border border-dashed p-3 text-sm">
 				This collection has no indexes.
 			</p>
 		);
@@ -164,7 +164,7 @@ function IndexList({
 								className="text-muted-foreground shrink-0"
 								aria-hidden="true"
 							/>
-							<span className="truncate font-medium">{index.name}</span>
+							<span className="truncate font-semibold">{index.name}</span>
 							{index.unique && <Badge variant="outline">unique</Badge>}
 							{index.sparse && <Badge variant="outline">sparse</Badge>}
 							{index.ttlSeconds !== undefined && (
@@ -182,7 +182,7 @@ function IndexList({
 							size="icon"
 							aria-label={`Drop index ${index.name}`}
 							onClick={() => onDrop(index)}
-							className="text-muted-foreground hover:text-destructive shrink-0"
+							className="text-muted-foreground hover:bg-danger-soft hover:text-destructive active:bg-danger-soft shrink-0"
 						>
 							<TrashIcon size={16} />
 						</Button>
@@ -268,8 +268,8 @@ function CreateIndexDialog({
 				</DialogHeader>
 
 				<div className="flex flex-col gap-4">
-					<div className="flex flex-col gap-2">
-						<label htmlFor={keysId} className="text-sm font-medium">
+					<div className="flex flex-col gap-1.5">
+						<label htmlFor={keysId} className="text-sm">
 							Keys
 						</label>
 						<Input
@@ -281,8 +281,8 @@ function CreateIndexDialog({
 						/>
 					</div>
 
-					<div className="flex flex-col gap-2">
-						<label htmlFor={nameId} className="text-sm font-medium">
+					<div className="flex flex-col gap-1.5">
+						<label htmlFor={nameId} className="text-sm">
 							Name (optional)
 						</label>
 						<Input
@@ -295,7 +295,7 @@ function CreateIndexDialog({
 
 					<div className="flex items-center justify-between rounded-md border px-3 py-2">
 						<div>
-							<p className="text-sm font-medium">Unique</p>
+							<p className="text-sm">Unique</p>
 							<p className="text-muted-foreground text-xs">Reject duplicate values.</p>
 						</div>
 						<Switch checked={unique} onCheckedChange={setUnique} aria-label="Unique index" />
@@ -303,7 +303,7 @@ function CreateIndexDialog({
 
 					<div className="flex items-center justify-between rounded-md border px-3 py-2">
 						<div>
-							<p className="text-sm font-medium">Sparse</p>
+							<p className="text-sm">Sparse</p>
 							<p className="text-muted-foreground text-xs">
 								Only index documents that contain the field.
 							</p>
@@ -311,8 +311,8 @@ function CreateIndexDialog({
 						<Switch checked={sparse} onCheckedChange={setSparse} aria-label="Sparse index" />
 					</div>
 
-					<div className="flex flex-col gap-2">
-						<label htmlFor={ttlId} className="text-sm font-medium">
+					<div className="flex flex-col gap-1.5">
+						<label htmlFor={ttlId} className="text-sm">
 							TTL in seconds (optional)
 						</label>
 						<Input
@@ -330,7 +330,7 @@ function CreateIndexDialog({
 						Cancel
 					</Button>
 					<Button onClick={handleSave} disabled={saving}>
-						{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />}
+						{saving && <Loader2 className="animate-spin" aria-hidden="true" />}
 						Create index
 					</Button>
 				</DialogFooter>

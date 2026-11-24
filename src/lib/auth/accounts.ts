@@ -89,7 +89,7 @@ export async function dummyVerify(password: string): Promise<void> {
 		}
 		await verify(await dummyHashPromise, password);
 	} catch {
-		// ignored — only here to spend comparable time
+		// The outcome does not matter, this only spends comparable time.
 	}
 }
 
@@ -246,7 +246,6 @@ export async function claimInitialSetup(): Promise<boolean> {
 	return result.upsertedCount === 1;
 }
 
-/** Release the setup claim so a failed first attempt can be retried. */
 export async function releaseInitialSetup(): Promise<void> {
 	const controller = getMongoController();
 	const connection = await controller.ensureConnection();

@@ -1,19 +1,19 @@
 import type { Metadata } from 'next';
 
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import React from 'react';
 import Providers from '@/app/providers';
 import { ReactScan } from '@/components/custom/react-scan';
 import { envBool } from '@/lib/env';
 
-const geistSans = Geist({
-	variable: '--font-geist-sans',
+const uiFont = Inter({
+	variable: '--mgn-font-ui',
 	subsets: ['latin'],
 });
 
-const geistMono = Geist_Mono({
-	variable: '--font-geist-mono',
+const codeFont = JetBrains_Mono({
+	variable: '--mgn-font-code',
 	subsets: ['latin'],
 });
 
@@ -44,7 +44,7 @@ export default async function RootLayout({ children }: Readonly<RootLayoutProps>
 	return (
 		<html lang="en" className="w-full h-full" suppressHydrationWarning>
 			{envBool('DEV_REACTSCAN', false) && <ReactScan />}
-			<body className={`${geistSans.variable} ${geistMono.variable} antialiased w-full h-full`}>
+			<body className={`${uiFont.variable} ${codeFont.variable} antialiased w-full h-full`}>
 				<Providers>{children}</Providers>
 			</body>
 		</html>

@@ -31,7 +31,7 @@ function readEnv(key) {
 				return match[1].trim().replace(/^['"]|['"]$/g, '');
 			}
 		} catch {
-			// file not present — ignore
+			// Neither env file has to exist.
 		}
 	}
 	return undefined;

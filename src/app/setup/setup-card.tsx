@@ -2,7 +2,7 @@
 
 import { cloneElement, FormEvent, useId, useState, type ReactElement } from 'react';
 import Image from 'next/image';
-import { AlertCircle } from 'lucide-react';
+import { Banner } from '@/components/ui/banner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -66,12 +66,12 @@ export function SetupCard() {
 						className="h-12 w-12 dark:invert"
 						priority
 					/>
-					<span className="text-2xl font-semibold tracking-tight">Mongonaut</span>
+					<span className="text-xl font-semibold">Mongonaut</span>
 				</div>
 
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-base">Create the first administrator</CardTitle>
+						<CardTitle>Create the first administrator</CardTitle>
 						<CardDescription>
 							This one-time setup creates the initial admin account. After this, accounts are
 							managed inside Mongonaut.
@@ -124,12 +124,12 @@ export function SetupCard() {
 								/>
 							</Field>
 
-							{errorMessage && <Notice>{errorMessage}</Notice>}
+							{errorMessage && <Banner variant="error">{errorMessage}</Banner>}
 
 							<Button
 								type="submit"
 								disabled={submitting || !email || password.length === 0}
-								className="w-full bg-[#FFB211] text-black hover:bg-[#E5A010]"
+								className="w-full"
 							>
 								{submitting ? 'Creating…' : 'Create administrator'}
 							</Button>
@@ -144,23 +144,11 @@ export function SetupCard() {
 function Field({ label, children }: { label: string; children: ReactElement<{ id?: string }> }) {
 	const id = useId();
 	return (
-		<div className="flex flex-col gap-2">
-			<label htmlFor={id} className="text-sm font-medium">
+		<div className="flex flex-col gap-1.5">
+			<label htmlFor={id} className="text-sm">
 				{label}
 			</label>
 			{cloneElement(children, { id })}
-		</div>
-	);
-}
-
-function Notice({ children }: { children: React.ReactNode }) {
-	return (
-		<div
-			role="alert"
-			className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive"
-		>
-			<AlertCircle className="mt-0.5 size-4 shrink-0" />
-			<div className="space-y-1">{children}</div>
 		</div>
 	);
 }

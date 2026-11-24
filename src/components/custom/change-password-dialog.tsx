@@ -157,8 +157,8 @@ export function ChangePasswordDialog({
 function Field({ label, children }: { label: string; children: ReactElement<{ id?: string }> }) {
 	const id = useId();
 	return (
-		<div className="flex flex-col gap-2">
-			<label htmlFor={id} className="text-sm font-medium">
+		<div className="flex flex-col gap-1.5">
+			<label htmlFor={id} className="text-sm">
 				{label}
 			</label>
 			{cloneElement(children, { id })}

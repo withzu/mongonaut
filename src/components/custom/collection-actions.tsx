@@ -303,8 +303,8 @@ function useCollectionActions({
 								: `Create a copy of "${collection}" (documents and indexes) in "${database}".`}
 						</DialogDescription>
 					</DialogHeader>
-					<div className="space-y-2">
-						<label htmlFor={nameInputId} className="text-sm font-medium">
+					<div className="flex flex-col gap-1.5">
+						<label htmlFor={nameInputId} className="text-sm">
 							{nameDialog === 'rename' ? 'New name' : 'Target collection name'}
 						</label>
 						<Input

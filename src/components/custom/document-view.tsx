@@ -1,13 +1,15 @@
 'use client';
 
 import { PencilIcon, TrashIcon } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { JsonEditorProps as LibJsonEditorProps } from 'json-edit-react';
 import { Button } from '@/components/ui/button';
 import { ClientJsonEditor } from '@/components/custom/client-json-editor';
 import { DocumentEditorDialog } from '@/components/custom/document-editor-dialog';
+import { ShortcutTooltip } from '@/components/custom/shortcut-tooltip';
+import { useShortcut } from '@/hooks/use-shortcut';
 import { preloadJsonEditor } from '@/components/custom/lazy-json-editor';
 import { deleteDocument } from '@/actions/databaseOperation';
 import {
@@ -52,6 +54,7 @@ export function DocumentView({
 	const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 	const [showEditor, setShowEditor] = useState(false);
 	const router = useRouter();
+	const viewRef = useRef<HTMLDivElement>(null);
 
 	const document = useMemo<JsonDocument>(() => JSON.parse(data), [data]);
 
@@ -79,27 +82,72 @@ export function DocumentView({
 		}
 	};
 
+	const returnFocus = (event: Event) => {
+		event.preventDefault();
+		viewRef.current?.focus({ preventScroll: true });
+	};
+
+	const handleCopy = async () => {
+		try {
+			await navigator.clipboard.writeText(data);
+			toast.success('Document copied');
+		} catch {
+			toast.error('The browser did not allow copying. It needs a secure connection.');
+		}
+	};
+
+	// These act on the document that has focus, so every view answers for itself.
+	const isSelected = () => viewRef.current?.contains(window.document.activeElement) ?? false;
+
+	useShortcut('copy-document', () => {
+		if (!isSelected()) return false;
+		void handleCopy();
+	});
+	useShortcut(
+		'edit-document',
+		() => {
+			if (!isSelected()) return false;
+			setShowEditor(true);
+		},
+		isEditable,
+	);
+	useShortcut(
+		'delete-document',
+		() => {
+			if (!isSelected()) return false;
+			setShowDeleteDialog(true);
+		},
+		isEditable,
+	);
+
 	return (
-		<div className="border rounded-lg overflow-hidden w-full [content-visibility:auto] [contain-intrinsic-size:auto_320px]">
+		<div
+			data-document
+			ref={viewRef}
+			tabIndex={-1}
+			className="focus:border-ring focus-row w-full scroll-my-2 overflow-hidden rounded-lg border focus-visible:outline-offset-[-1px] [content-visibility:auto] [contain-intrinsic-size:auto_320px]"
+		>
 			{isEditable && (
-				<div className="flex items-center justify-end gap-1 border-b bg-muted/30 px-2 py-1">
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={() => setShowEditor(true)}
-						onPointerEnter={preloadJsonEditor}
-						onFocus={preloadJsonEditor}
-						className="text-muted-foreground hover:text-primary cursor-pointer h-7 gap-1.5"
-					>
-						<PencilIcon size={14} />
-						Edit
-					</Button>
+				<div className="flex items-center justify-end bg-chrome gap-1 border-b px-2 py-1">
+					<ShortcutTooltip id="edit-document" label="Edit the selected document">
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => setShowEditor(true)}
+							onPointerEnter={preloadJsonEditor}
+							onFocus={preloadJsonEditor}
+							className="text-muted-foreground hover:text-foreground"
+						>
+							<PencilIcon size={14} />
+							Edit
+						</Button>
+					</ShortcutTooltip>
 					<Button
 						variant="ghost"
 						size="sm"
 						onClick={() => setShowDeleteDialog(true)}
 						disabled={isDeleting}
-						className="text-muted-foreground hover:text-destructive cursor-pointer h-7 gap-1.5"
+						className="text-muted-foreground hover:bg-danger-soft hover:text-destructive active:bg-danger-soft"
 					>
 						<TrashIcon size={14} />
 						Delete
@@ -108,7 +156,7 @@ export function DocumentView({
 			)}
 
 			<MemoizedJsonEditor
-				className="w-full h-full overflow-scroll bg-background! !dark:border-[#242424]"
+				className="h-full w-full overflow-auto"
 				data={document}
 				restrictAdd
 				restrictDelete
@@ -126,11 +174,12 @@ export function DocumentView({
 					initialValue={data}
 					documentIdJson={documentIdJson}
 					revision={revision}
+					onCloseAutoFocus={returnFocus}
 				/>
 			)}
 
 			<AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-				<AlertDialogContent>
+				<AlertDialogContent onCloseAutoFocus={returnFocus}>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Delete Document</AlertDialogTitle>
 						<AlertDialogDescription>
@@ -139,7 +188,7 @@ export function DocumentView({
 					</AlertDialogHeader>
 					<AlertDialogFooter>
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+						<AlertDialogAction variant="destructive" onClick={handleDelete} disabled={isDeleting}>
 							Delete
 						</AlertDialogAction>
 					</AlertDialogFooter>
