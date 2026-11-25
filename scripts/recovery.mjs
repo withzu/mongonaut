@@ -42,6 +42,10 @@ function generatePassword() {
 	return randomBytes(24).toString('base64url');
 }
 
+// Highest system database schema version this script understands. Keep in sync
+// with SYSTEM_SCHEMA_VERSION in src/lib/system-schema.ts.
+const SUPPORTED_SCHEMA_VERSION = 1;
+
 async function main() {
 	const url = readEnv('MONGO_CONNECTION_URL');
 	if (!url) {
@@ -54,6 +58,13 @@ async function main() {
 	const client = new MongoClient(url);
 	await client.connect();
 	try {
+		const schema = await client.db(systemDb).collection('meta').findOne({ _id: 'schema' });
+		if (typeof schema?.version === 'number' && schema.version > SUPPORTED_SCHEMA_VERSION) {
+			console.error(
+				`[recovery] The system database has schema version ${schema.version}, this release supports up to ${SUPPORTED_SCHEMA_VERSION}. Run the recovery command of the newer release.`,
+			);
+			process.exit(1);
+		}
 		const accounts = client.db(systemDb).collection('accounts');
 		const filter = targetEmail ? { email: targetEmail } : { isAdmin: true };
 		const targets = await accounts.find(filter).toArray();

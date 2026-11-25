@@ -3,7 +3,7 @@ import 'server-only';
 import { hash, verify } from '@node-rs/argon2';
 import { ObjectId, type Collection as MongoCollection } from 'mongodb';
 import { getMongoController } from '@/lib/mongoController';
-import { env } from '@/lib/env';
+import { ensureSystemSchema, INTERNAL_DB } from '@/lib/system-schema';
 
 export type GrantAccess = 'read' | 'readWrite';
 
@@ -39,10 +39,9 @@ export interface PublicAccount {
 	updatedAt: string;
 }
 
-export const INTERNAL_DB = env('MONGONAUT_SYSTEM_DB', '__mongonaut').trim() || '__mongonaut';
+export { INTERNAL_DB };
 const ACCOUNTS_COLLECTION = 'accounts';
 
-let indexesEnsured = false;
 let dummyHashPromise: Promise<string> | null = null;
 
 async function accountsCollection(): Promise<MongoCollection<AccountDoc>> {
@@ -51,12 +50,8 @@ async function accountsCollection(): Promise<MongoCollection<AccountDoc>> {
 	if (!connection.success) {
 		throw connection.error ?? new Error('Could not connect to MongoDB');
 	}
-	const collection = controller.client.db(INTERNAL_DB).collection<AccountDoc>(ACCOUNTS_COLLECTION);
-	if (!indexesEnsured) {
-		await collection.createIndex({ email: 1 }, { unique: true });
-		indexesEnsured = true;
-	}
-	return collection;
+	await ensureSystemSchema();
+	return controller.client.db(INTERNAL_DB).collection<AccountDoc>(ACCOUNTS_COLLECTION);
 }
 
 function normalizeEmail(email: string): string {
@@ -237,6 +232,7 @@ export async function claimInitialSetup(): Promise<boolean> {
 	if (!connection.success) {
 		throw new Error(connection.error);
 	}
+	await ensureSystemSchema();
 	const meta = controller.client.db(INTERNAL_DB).collection('meta');
 	const result = await meta.updateOne(
 		{ _id: 'setup' as unknown as ObjectId },

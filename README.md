@@ -413,6 +413,8 @@ limit.
 | `MONGONAUT_SYSTEM_DB` | Internal database used to store Mongonaut accounts | `__mongonaut` |
 | `MONGONAUT_RECOVERY_TTL_MINUTES` | Lifetime of temporary recovery passwords in minutes | `30` |
 
+The system database carries a schema version in its `meta` collection. Mongonaut upgrades it automatically on startup. A release refuses to use a system database written by a newer release, so back up `MONGONAUT_SYSTEM_DB` before upgrading if you might need to roll back.
+
 ## Administrator Password Recovery
 
 Account mode includes a server side recovery command. It creates a temporary password without replacing the existing password immediately. Signing in with the temporary password requires the user to choose a new password.

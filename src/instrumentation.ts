@@ -34,7 +34,20 @@ export async function register() {
 	// away instead of on the first request. The controller logs the outcome.
 	const { getMongoController } = await import('@/lib/mongoController');
 	try {
-		void getMongoController().ensureConnection();
+		const connecting = getMongoController().ensureConnection();
+		if (cfg.mode === 'ACCOUNT') {
+			// Migrate the system database at startup, so a schema problem shows up in
+			// the logs right away. Requests retry it if this attempt fails.
+			const { ensureSystemSchema } = await import('@/lib/system-schema');
+			void connecting.then(result => {
+				if (!result.success) return;
+				ensureSystemSchema().catch(error =>
+					console.error(
+						`[mongonaut] system database migration failed: ${error instanceof Error ? error.message : String(error)}`,
+					),
+				);
+			});
+		}
 	} catch (error) {
 		console.error(
 			`[mongonaut] MONGO_CONNECTION_URL is not a valid MongoDB connection string: ${error instanceof Error ? error.message : String(error)}`,
