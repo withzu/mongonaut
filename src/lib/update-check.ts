@@ -38,11 +38,13 @@ export function isNewerVersion(candidate: string, current: string): boolean {
 	const next = parseVersion(candidate);
 	const installed = parseVersion(current);
 	if (!next || !installed) return false;
+	// A release candidate is never offered as an update, even if it is marked latest by mistake.
+	if (next.prerelease) return false;
 
 	for (let i = 0; i < 3; i++) {
 		if (next.core[i] !== installed.core[i]) return next.core[i] > installed.core[i];
 	}
-	return installed.prerelease && !next.prerelease;
+	return installed.prerelease;
 }
 
 async function fetchLatestRelease(): Promise<LatestRelease | null> {

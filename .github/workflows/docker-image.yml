@@ -80,9 +80,11 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             # Not generated for 0.x versions, so ":1" appears with the 1.0.0 release.
             type=semver,pattern={{major}}
-          # "latest" follows the semver tags and is skipped for prereleases.
+          # Prerelease tags such as v1.0.0-rc.1 only get their exact version tag.
+          # metadata-action already skips latest, 1.0 and 1 for them, the explicit
+          # false keeps it that way should its defaults ever change.
           flavor: |
-            latest=auto
+            latest=${{ contains(github.ref_name, '-') && 'false' || 'auto' }}
           labels: |
             org.opencontainers.image.title=Mongonaut
             org.opencontainers.image.description=A modern, open source MongoDB web interface built for self hosted environments.
