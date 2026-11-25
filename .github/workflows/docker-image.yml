@@ -78,6 +78,8 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            # Not generated for 0.x versions, so ":1" appears with the 1.0.0 release.
+            type=semver,pattern={{major}}
           # "latest" follows the semver tags and is skipped for prereleases.
           flavor: |
             latest=auto
