@@ -47,7 +47,7 @@ const theme: Theme = {
 		number: 'var(--mgn-code-number)',
 		boolean: 'var(--mgn-code-keyword)',
 		null: { color: 'var(--mgn-code-keyword)', fontVariant: 'normal', fontWeight: 'normal' },
-		inputHighlight: { backgroundColor: 'var(--mgn-code-selection)' },
+		inputHighlight: 'var(--mgn-code-selection)',
 		iconCollection: 'var(--mgn-text-secondary)',
 		iconCopy: 'var(--mgn-text-secondary)',
 	},

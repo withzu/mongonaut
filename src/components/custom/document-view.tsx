@@ -154,11 +154,7 @@ export function DocumentView({
 				</div>
 			)}
 
-			<MemoizedJsonViewer
-				className="h-full w-full overflow-auto"
-				data={document}
-				collapse={1}
-			/>
+			<MemoizedJsonViewer className="h-full w-full overflow-auto" data={document} collapse={1} />
 
 			{isEditable && (
 				<DocumentEditorDialog
