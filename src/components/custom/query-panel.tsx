@@ -167,9 +167,7 @@ export function QueryPanel({
 			const parsed = JSON.parse(defaultSort) as Record<string, number>;
 			const [field] = Object.keys(parsed);
 			if (field) return { field, direction: String(parsed[field]) };
-		} catch {
-			// ignore malformed sort
-		}
+		} catch {}
 		return { field: '', direction: '1' };
 	}, [defaultSort]);
 	const [sortField, setSortField] = useState(initialSort.field);
