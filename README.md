@@ -68,16 +68,6 @@ Mongonaut is built with Next.js, React, TypeScript, and the official MongoDB Nod
 * Audit every data and account change to the container log
 * Deploy through GitHub Container Registry on AMD64 and ARM64
 
-### Not included yet
-
-Mongonaut is deliberately small. The following is not available today:
-
-* Multiple MongoDB connections in one instance
-* `explain()` output and query plan analysis
-* Field projections, multi field sorting, and bulk updates
-* Two factor authentication and a session overview
-* GridFS, change streams, and server side user management
-
 ## Document Format
 
 Documents are shown and edited as
