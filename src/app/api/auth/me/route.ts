@@ -16,8 +16,6 @@ export async function GET(req: NextRequest) {
 	const session = await readSessionToken(cfg, req.cookies.get(SESSION_COOKIE)?.value);
 	if (!session) return anonymous;
 
-	// In account mode the token alone is not enough: the account may have been
-	// disabled, deleted or signed out everywhere since the cookie was issued.
 	if (session.mode === 'ACCOUNT') {
 		const account = await findAccountById(session.sub);
 		const stale = !account || account.disabled || account.tokenVersion !== (session.ver ?? -1);

@@ -1,19 +1,38 @@
 'use client';
 
-import { JsonEditor, type JsonEditorProps, type Theme } from 'json-edit-react';
-import {
-	CheckIcon,
-	ChevronDownIcon,
-	ClipboardCopy,
-	PenIcon,
-	PlusSquareIcon,
-	TrashIcon,
-	XIcon,
-} from 'lucide-react';
+import { JsonViewer, type JsonViewerProps, type Theme } from 'json-edit-react';
 
-// Roles switch with the theme on their own, so one definition serves both.
+// Glyphs follow lucide (ChevronDown, ClipboardCopy). Since json-edit-react v2 the
+// theme owns its icons and renders the outer <svg> itself, so only the inner
+// markup lives here.
+const strokeIcon = {
+	viewBox: '0 0 24 24',
+	svgProps: {
+		fill: 'none',
+		stroke: 'currentColor',
+		strokeWidth: 2,
+		strokeLinecap: 'round',
+		strokeLinejoin: 'round',
+	},
+} as const;
+
 const theme: Theme = {
 	displayName: 'Mongonaut',
+	icons: {
+		collection: { ...strokeIcon, content: <path d="m6 9 6 6 6-6" /> },
+		copy: {
+			...strokeIcon,
+			content: (
+				<>
+					<rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+					<path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+					<path d="M16 4h2a2 2 0 0 1 2 2v4" />
+					<path d="M21 14H11" />
+					<path d="m15 10-4 4 4 4" />
+				</>
+			),
+		},
+	},
 	styles: {
 		container: {
 			backgroundColor: 'var(--mgn-surface-content)',
@@ -30,31 +49,18 @@ const theme: Theme = {
 		null: { color: 'var(--mgn-code-keyword)', fontVariant: 'normal', fontWeight: 'normal' },
 		inputHighlight: { backgroundColor: 'var(--mgn-code-selection)' },
 		iconCollection: 'var(--mgn-text-secondary)',
-		iconEdit: 'var(--mgn-text-secondary)',
-		iconDelete: 'var(--mgn-danger)',
-		iconAdd: 'var(--mgn-text-secondary)',
 		iconCopy: 'var(--mgn-text-secondary)',
-		iconOk: 'var(--mgn-success)',
-		iconCancel: 'var(--mgn-danger)',
 	},
 };
 
-export function ClientJsonEditor(props: JsonEditorProps) {
+export function ClientJsonViewer(props: JsonViewerProps) {
 	return (
-		<JsonEditor
+		<JsonViewer
 			theme={theme}
-			enableClipboard={true}
+			showClipboardButton={true}
+			showCollectionCount={true}
 			rootName={''}
-			icons={{
-				edit: <PenIcon size={14} />,
-				delete: <TrashIcon size={14} />,
-				add: <PlusSquareIcon size={14} />,
-				cancel: <XIcon size={14} />,
-				ok: <CheckIcon size={14} />,
-				chevron: <ChevronDownIcon size={14} />,
-				copy: <ClipboardCopy size={14} />,
-			}}
-			showArrayIndices={true}
+			showArrayIndexes={true}
 			maxWidth="100%"
 			{...props}
 		/>

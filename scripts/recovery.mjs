@@ -1,17 +1,4 @@
 #!/usr/bin/env node
-/**
- * Admin password recovery for ACCOUNT mode.
- *
- * Generates a one-time temporary password and stores ONLY its hash in a separate
- * field (recoveryHash) on the target account(s). The real password is never
- * touched. The plaintext temporary password is printed here, on the server
- * console, and is valid for a limited time. Signing in with it forces an
- * immediate password change in the app.
- *
- * Usage:
- *   pnpm recovery                 # all admin accounts
- *   pnpm recovery user@email.com  # a specific account
- */
 
 import { readFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
@@ -30,15 +17,12 @@ function readEnv(key) {
 			if (match) {
 				return match[1].trim().replace(/^['"]|['"]$/g, '');
 			}
-		} catch {
-			// Neither env file has to exist.
-		}
+		} catch {}
 	}
 	return undefined;
 }
 
 function generatePassword() {
-	// ~32 chars, URL-safe, ample entropy.
 	return randomBytes(24).toString('base64url');
 }
 

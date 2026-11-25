@@ -1,7 +1,6 @@
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-// The logo without the empty margin of logo.svg, so it aligns with its neighbors.
 export function LogoMark({ className, priority }: { className?: string; priority?: boolean }) {
 	return (
 		<Image

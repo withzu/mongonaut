@@ -104,9 +104,7 @@ function useCollectionActions({
 	const handleDownload = async () => {
 		setIsBusy(true);
 		try {
-			// Only the collection actually on screen carries a query. The same menu
-			// opens from the sidebar for other collections, where the current URL
-			// parameters belong to a different collection entirely.
+			// The menu also opens for other collections, whose query is not in the URL.
 			const query: DocumentQuery = isOnThisCollection
 				? {
 						mode: searchParams.get('mode') as DocumentQuery['mode'],

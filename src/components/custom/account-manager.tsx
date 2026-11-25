@@ -395,7 +395,6 @@ function GrantsEditor({
 
 	const databaseOptions = (current: string) => {
 		const names = namespaces.map(n => n.database);
-		// Keep a grant's current database selectable even if it no longer exists.
 		if (current && !names.includes(current)) names.unshift(current);
 		return names;
 	};

@@ -140,11 +140,7 @@ export async function verifyIdToken(
 	return payload as VerifiedIdToken;
 }
 
-/**
- * When an allowlist is configured the address has to be verified by the
- * provider. Otherwise an identity provider that lets users choose an arbitrary
- * unverified email would let anyone claim an allowlisted address.
- */
+// With an allowlist, an unverified email could otherwise claim an allowed address.
 export function isEmailAllowed(
 	cfg: OidcConfig,
 	email: string | undefined,
@@ -153,7 +149,6 @@ export function isEmailAllowed(
 	if (!cfg.allowedEmails || cfg.allowedEmails.length === 0) return true;
 	if (typeof email !== 'string' || !email) return false;
 	// Fail closed: a missing claim does not prove the address is verified.
-	// The string form is accepted because some providers encode it that way.
 	if (emailVerified !== true && emailVerified !== 'true') return false;
 	return cfg.allowedEmails.includes(email.toLowerCase());
 }

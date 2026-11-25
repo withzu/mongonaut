@@ -89,8 +89,6 @@ export class MongoController {
 		return { success: false, error: message };
 	}
 
-	// The readiness probe retries every few seconds, so only state changes are
-	// logged instead of one line per failed attempt.
 	private reportConnectionFailure(message: string, error: unknown) {
 		if (message === this.lastConnectionError) return;
 		this.lastConnectionError = message;
@@ -356,8 +354,6 @@ export class MongoController {
 	): Promise<ControllerResult<PaginatedDocuments>> {
 		return this.run('Could not read the collection', async () => {
 			const collection = this.client.db(dbName).collection(collectionName);
-			// An estimate keeps browsing cheap on large collections; exact counts are
-			// only used for filtered queries where the filter bounds the scan.
 			const total = await collection.estimatedDocumentCount(this.queryOptions);
 			const documents = await collection
 				.find({}, this.documentReadOptions)
@@ -378,10 +374,7 @@ export class MongoController {
 	): Promise<ControllerResult<PaginatedDocuments>> {
 		return this.run('Could not run the query', async () => {
 			const collection = this.client.db(dbName).collection(collectionName);
-			// An exact count scans everything the filter does not narrow down, which
-			// can outlive the query budget on a large collection. The documents
-			// themselves are the point of the request, so a count that does not
-			// finish degrades to "unknown total" instead of failing the query.
+			// A slow exact count degrades to an unknown total instead of failing the query.
 			let total: number | null = null;
 			try {
 				total = await collection.countDocuments(filter, this.queryOptions);
@@ -592,14 +585,12 @@ function describeConnectionError(error: unknown): string {
 	return 'Could not connect to MongoDB';
 }
 
-/** Scheme and hosts of a connection string, without credentials or options. */
 function describeConnectionTarget(url: string): string {
 	const match = /^([a-z0-9+.-]+:\/\/)(?:[^/?]*@)?([^/?]*)/i.exec(url);
 	return match ? `${match[1]}${match[2]}` : '<unparseable connection URL>';
 }
 
-// Kept on globalThis so the startup check in instrumentation.ts and the route
-// handlers share one client, even when they end up in separate module graphs.
+// On globalThis so instrumentation and route handlers share one client.
 const globalForMongo = globalThis as typeof globalThis & {
 	mongonautController?: MongoController;
 };

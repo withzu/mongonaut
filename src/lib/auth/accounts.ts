@@ -212,7 +212,6 @@ export async function updateAccount(id: string, patch: UpdateAccountInput): Prom
 	try {
 		await collection.updateOne({ _id: new ObjectId(id) }, { $set: update });
 	} catch (error) {
-		// The unique index is the authority in case of a concurrent rename.
 		if (isDuplicateKeyError(error)) throw new DuplicateEmailError();
 		throw error;
 	}
@@ -222,10 +221,6 @@ function isDuplicateKeyError(error: unknown): boolean {
 	return !!error && typeof error === 'object' && (error as { code?: number }).code === 11000;
 }
 
-/**
- * Claim the one-time initial setup. The upsert is atomic, so two parallel setup
- * requests cannot both create a first administrator.
- */
 export async function claimInitialSetup(): Promise<boolean> {
 	const controller = getMongoController();
 	const connection = await controller.ensureConnection();

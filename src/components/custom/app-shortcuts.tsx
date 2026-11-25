@@ -37,7 +37,6 @@ export function AppShortcuts({
 			setOverlay(null);
 			return;
 		}
-		// Another dialog may hold unsaved input, so it stays in front.
 		if (document.querySelector('[role$="dialog"][data-state="open"]')) return;
 		setOverlay('palette');
 	});

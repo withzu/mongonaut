@@ -6,11 +6,6 @@ import { getAppVersion } from '@/lib/version';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/**
- * Readiness: can Mongonaut actually serve requests right now? Unlike
- * `/api/health`, which only proves the process is up, this reaches MongoDB and
- * reports a misconfigured auth setup. The container health check uses this one.
- */
 export async function GET() {
 	const auth = getPublicAuthInfo();
 	const connection = await getMongoController().ensureConnection();

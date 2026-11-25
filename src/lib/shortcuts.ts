@@ -1,20 +1,9 @@
-/**
- * Every keyboard shortcut in one place. The help dialog and hints read
- * the keys from here, so what is shown and what works cannot drift apart.
- *
- * `mod` is Command on macOS and Control elsewhere. Combinations a browser keeps
- * for itself (new tab, close tab, reload, find in page) are never used, and
- * neither are characters that need Alt on common layouts.
- */
 interface ShortcutDefinition {
 	keys: string[];
 	label: string;
 	group: 'General' | 'Collection' | 'Document' | 'Editor' | 'Sidebar';
-	/** Also runs while a dialog or menu is open. */
 	inDialogs?: boolean;
-	/** Keeps firing while the key is held. */
 	repeat?: boolean;
-	/** Hidden where the account cannot write. */
 	write?: boolean;
 }
 
@@ -78,7 +67,6 @@ export type ShortcutId = keyof typeof definitions;
 
 export const SHORTCUTS: Record<ShortcutId, ShortcutDefinition> = definitions;
 
-/** Returning false means the shortcut did not apply and the key passes through. */
 export type ShortcutHandler = () => void | boolean;
 
 const handlers = new Map<ShortcutId, ShortcutHandler[]>();
@@ -89,7 +77,6 @@ export function isMac(): boolean {
 
 function pressedKey(event: KeyboardEvent): string {
 	const key = event.key.toLowerCase();
-	// Layouts without Latin letters still use the physical position.
 	if (key.length === 1 && key > '\x7f' && /^Key[A-Z]$/.test(event.code)) {
 		return event.code.slice(3).toLowerCase();
 	}
@@ -104,7 +91,6 @@ function matchesCombo(combo: string, event: KeyboardEvent): boolean {
 
 	if (event.altKey || secondary || primary !== parts.includes('mod')) return false;
 	if (pressedKey(event) !== key) return false;
-	// Layouts disagree on which symbols need Shift, so it only counts for letters and named keys.
 	const isSymbol = key.length === 1 && !/[a-z]/.test(key);
 	return isSymbol || event.shiftKey === parts.includes('shift');
 }
@@ -172,10 +158,6 @@ export function registerShortcut(id: ShortcutId, handler: ShortcutHandler): () =
 	};
 }
 
-/*
-  Single key shortcuts can be turned off, because speech input and unsteady
-  hands trigger them by accident. Stored per browser.
-*/
 const SINGLE_KEYS_STORAGE = 'singleKeyShortcuts';
 const listeners = new Set<() => void>();
 let singleKeys: boolean | undefined;
@@ -195,9 +177,7 @@ export function setSingleKeysEnabled(enabled: boolean): void {
 	singleKeys = enabled;
 	try {
 		localStorage.setItem(SINGLE_KEYS_STORAGE, enabled ? 'on' : 'off');
-	} catch {
-		// Storage can be unavailable in private browsing modes.
-	}
+	} catch {}
 	listeners.forEach(listener => listener());
 }
 

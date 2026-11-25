@@ -40,9 +40,7 @@ export function rememberCollection(href: string): void {
 	const next = [href, ...parse(read()).filter(entry => entry !== href)].slice(0, LIMIT);
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-	} catch {
-		// Storage can be unavailable in private browsing modes.
-	}
+	} catch {}
 	listeners.forEach(listener => listener());
 }
 
@@ -61,7 +59,6 @@ export function listCollections(databases: Database[]): CollectionEntry[] {
 	);
 }
 
-/** Only collections this account can still see, whoever used the browser before. */
 export function useRecentCollections(databases: Database[]): CollectionEntry[] {
 	const raw = useSyncExternalStore(subscribe, read, () => '[]');
 

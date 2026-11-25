@@ -48,12 +48,7 @@ export function stringifyDocumentJson(value: unknown, space: number = 0): string
 	return JSON.stringify(simplify(serialized.value), null, space);
 }
 
-/**
- * JSON.parse rounds integers beyond 2^53 to the nearest double before EJSON
- * ever sees them, so a 64-bit value typed as a plain number would be stored
- * with different digits. The reviver reads the original literal and keeps it
- * as an exact Long instead.
- */
+// JSON.parse rounds integers beyond 2^53, so the reviver keeps the original literal as a Long.
 function preserveLargeIntegers(
 	_key: string,
 	value: unknown,
@@ -94,12 +89,6 @@ export function stringifyDocumentId(id: unknown): string {
 	return stringifyDocumentJson(id);
 }
 
-/**
- * Short fingerprint of a document as it was handed to the browser. Saving sends
- * it back so the server can tell whether somebody else wrote to the same
- * document in the meantime. BSON preserves field order, so serializing an
- * unchanged document again produces the same string and the same revision.
- */
 export function documentRevision(json: string): string {
 	return createHash('sha256').update(json).digest('hex').slice(0, 16);
 }

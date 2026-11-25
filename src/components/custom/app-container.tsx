@@ -1,6 +1,5 @@
 import React from 'react';
 
-// The first row lines up with the logo row of the sidebar.
 export function AppContainer({ children }: { children?: React.ReactNode | React.ReactNode[] }) {
 	return (
 		<div className="mt-28 flex h-full w-full flex-col gap-3 p-2 md:mt-0 md:p-5 md:pt-2">

@@ -143,7 +143,6 @@ export async function setAccountPasswordAction(id: string, password: string): Pr
 export async function deleteAccountAction(id: string): Promise<AdminResult> {
 	const guard = await requireAdmin();
 	if (!guard.allowed) return { success: false, error: guard.error };
-	// An administrator must not remove their own access by accident.
 	if (guard.ctx.account?._id.toString() === id) {
 		return { success: false, error: 'You cannot delete your own account' };
 	}

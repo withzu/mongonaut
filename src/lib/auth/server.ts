@@ -123,7 +123,6 @@ export function accessAllowed(ctx: AccessContext, req: AccessRequest): boolean {
 		if (!isValidName(req.database) || isHiddenDb(req.database)) return false;
 	}
 	if (req.collection !== undefined && !isValidName(req.collection)) return false;
-	// Global read-only mode outranks every grant, in every auth mode.
 	if (req.write && isGlobalReadonly()) return false;
 
 	switch (ctx.mode) {
@@ -143,12 +142,9 @@ export function accessAllowed(ctx: AccessContext, req: AccessRequest): boolean {
 	}
 }
 
-// Guards a database or collection operation. The database is mandatory here;
-// instance level checks go through requireAnyAccess or requireInstanceAdmin.
 export async function guardAccess(req: AccessRequest): Promise<GuardResult> {
 	if (!isValidName(req.database)) return { allowed: false, error: DENIED_MESSAGE };
 	const ctx = await getAccessContext();
-	// Checked before the grant lookup so the user sees the actual reason.
 	if (req.write && isGlobalReadonly()) return { allowed: false, error: READONLY_MESSAGE };
 	if (!accessAllowed(ctx, req)) return { allowed: false, error: DENIED_MESSAGE };
 	return { allowed: true, ctx };
@@ -160,9 +156,6 @@ export async function requireAdmin(): Promise<GuardResult> {
 	return { allowed: false, error: ADMIN_MESSAGE };
 }
 
-// Instance-wide operations such as creating or dropping a database. Only ACCOUNT
-// mode knows the difference between administrators and regular users, so every
-// other mode grants this to whoever got through the front door.
 export function canAdministerInstance(ctx: AccessContext): boolean {
 	switch (ctx.mode) {
 		case 'NONE':

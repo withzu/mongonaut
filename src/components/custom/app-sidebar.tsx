@@ -63,9 +63,7 @@ function readOpenDatabases(): string[] {
 function writeOpenDatabases(names: string[]): void {
 	try {
 		localStorage.setItem(OPEN_DATABASES_KEY, JSON.stringify(names));
-	} catch {
-		// Storage can be unavailable in private browsing modes.
-	}
+	} catch {}
 }
 
 function handleTreeKeys(event: KeyboardEvent<HTMLElement>): void {
@@ -234,7 +232,6 @@ export function AppSidebar({
 	useShortcut('search', () => {
 		if (isMobile) setOpenMobile(true);
 		else setOpen(true);
-		// The sidebar may only just be appearing.
 		setTimeout(() => {
 			const field = document.getElementById('sidebar-search');
 			if (field instanceof HTMLInputElement) {

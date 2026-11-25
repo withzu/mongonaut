@@ -11,11 +11,7 @@ function clearAuthCookies(res: NextResponse) {
 	res.cookies.set(REDIRECT_COOKIE, '', { path: '/', maxAge: 0 });
 }
 
-/**
- * POST only. A GET logout could be triggered from any third party page, for
- * example through an image tag, and would sign the user out unasked. The same
- * origin check stops a cross site form from doing the same with a POST.
- */
+// POST only, so a third party page cannot sign users out via GET.
 export async function POST(req: NextRequest) {
 	if (!isSameOriginRequest(req)) {
 		return new NextResponse(CROSS_SITE_ERROR, { status: 403 });

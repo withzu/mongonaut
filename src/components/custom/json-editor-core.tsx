@@ -24,7 +24,6 @@ const SYNTAX_ROLES: Record<string, string> = {
 	invalid: 'var(--mgn-danger)',
 };
 
-// Added after the base theme, so these win for every tag JSON can produce.
 const syntax = vscodeLightStyle
 	.flatMap(style => style.tag)
 	.flatMap(tag => {

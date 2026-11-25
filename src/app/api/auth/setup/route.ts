@@ -42,8 +42,6 @@ export async function POST(req: NextRequest) {
 		return NextResponse.json({ ok: false, error: 'Account mode is not enabled' }, { status: 400 });
 	}
 
-	// Setup is unauthenticated by nature, so it gets the same abuse protection as
-	// the login endpoint.
 	const clientKey = getClientKey(req);
 	const limit = checkLoginRateLimit(clientKey);
 	if (!limit.allowed) {
@@ -78,7 +76,6 @@ export async function POST(req: NextRequest) {
 		return NextResponse.json({ ok: false, error: passwordError }, { status: 400 });
 	}
 
-	// Atomic claim so two simultaneous requests cannot both create an admin.
 	let claimed: boolean;
 	try {
 		claimed = await claimInitialSetup();
@@ -98,7 +95,6 @@ export async function POST(req: NextRequest) {
 		account = await createAccount({ email, password, name, isAdmin: true });
 	} catch (error) {
 		console.error('[setup] failed to create initial admin:', error);
-		// Free the claim so the operator can try again.
 		await releaseInitialSetup().catch(() => {});
 		return NextResponse.json(
 			{ ok: false, error: 'Could not create the administrator account' },

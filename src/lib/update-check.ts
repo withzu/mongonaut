@@ -34,10 +34,6 @@ function parseVersion(version: string) {
 	};
 }
 
-/**
- * Only compares against stable releases, so a prerelease of the same version
- * counts as older and every other prerelease detail can be ignored.
- */
 export function isNewerVersion(candidate: string, current: string): boolean {
 	const next = parseVersion(candidate);
 	const installed = parseVersion(current);
@@ -67,11 +63,6 @@ async function fetchLatestRelease(): Promise<LatestRelease | null> {
 	return { version: tag.replace(/^v/, ''), url };
 }
 
-/**
- * The newest stable release, looked up on GitHub at most every few hours.
- * Instances without internet access simply never show a hint, so a failed
- * lookup is not reported and only retried later.
- */
 async function getLatestRelease(): Promise<LatestRelease | null> {
 	if (cached && cached.expiresAt > Date.now()) return cached.latest;
 

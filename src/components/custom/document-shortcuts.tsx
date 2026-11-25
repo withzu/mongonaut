@@ -11,7 +11,6 @@ function moveFocus(step: 1 | -1): boolean {
 	if (documents.length === 0) return false;
 
 	const current = documents.findIndex(element => element.contains(document.activeElement));
-	// Without a selected document, start at the first one on screen.
 	const target =
 		current === -1
 			? (documents.find(isBelowTop) ?? documents[documents.length - 1])

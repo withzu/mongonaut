@@ -210,7 +210,6 @@ export const collectionExists = async (database: string, collection: string): Pr
 export interface DocumentEnvelope {
 	json: string;
 	idJson: string | null;
-	/** Fingerprint of `json`, sent back on save to detect a concurrent write. */
 	revision: string;
 }
 
@@ -354,9 +353,6 @@ export const exportCollection = async (
 	const limit = exportLimit();
 	const mode = resolveMode(query);
 
-	// The export follows whatever the user is currently looking at. Exporting the
-	// whole collection while a filter is applied would hand back documents the
-	// user never asked for.
 	let result: Awaited<ReturnType<typeof mongo.exportDocuments>>;
 	let actor: string;
 
@@ -409,7 +405,6 @@ export const exportCollection = async (
 	});
 
 	return success({
-		// Extended JSON keeps the export re-importable without losing BSON types.
 		json: stringifyDocumentJson(result.data.documents, 2),
 		count: result.data.documents.length,
 		truncated: result.data.truncated,
@@ -418,12 +413,7 @@ export const exportCollection = async (
 	});
 };
 
-/**
- * Runs a pipeline that writes with $out or $merge. This is the only way such a
- * pipeline executes: as a server action it needs a same-origin POST, which a
- * link or a reload cannot produce. A read-only pipeline is not executed here
- * and reports `executed: false`, so the caller shows its results as usual.
- */
+// The only path that runs $out/$merge: a server action needs a same-origin POST.
 export const runWritePipeline = async (
 	database: string,
 	collection: string,
@@ -515,8 +505,6 @@ export const updateDocument = async (
 		return failure(messageOf(error, 'Invalid JSON'));
 	}
 
-	// A save replaces the whole document, so without this check two people
-	// editing the same record would silently overwrite each other.
 	if (expectedRevision) {
 		const current = await mongo.findDocumentById(database, collection, documentId);
 		if (!current.success) return current;
@@ -722,8 +710,6 @@ export const duplicateCollection = async (
 	if (invalid) return failure(invalid);
 	if (targetName === collection) return failure('Please choose a different target name');
 
-	// $out replaces an existing collection, so an occupied target would be
-	// destroyed silently.
 	const existing = await mongo.collectionExists(database, targetName);
 	if (!existing.success) return existing;
 	if (existing.data) {

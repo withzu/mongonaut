@@ -17,19 +17,8 @@ function allowedHosts(req: NextRequest): Set<string> {
 	return hosts;
 }
 
-/**
- * Rejects cross site requests to the auth routes that create, change or clear
- * the session cookie. Route handlers do not get the origin check Next.js
- * applies to server actions, and SameSite=Lax does not stop a cross site form
- * from storing a cookie, which would allow login CSRF into an attacker's
- * account.
- *
- * Current browsers send Sec-Fetch-Site, and a page cannot set or override it.
- * Without it the Origin header is compared with the host the request was sent
- * to. Browsers send Origin on every cross site POST, so a request with neither
- * header comes from a non browser client (curl, scripts) that carries no
- * victim cookies, and is allowed.
- */
+// Route handlers lack the server action origin check, and SameSite=Lax does not stop login CSRF.
+// Requests without Sec-Fetch-Site and Origin come from non browser clients and are allowed.
 export function isSameOriginRequest(req: NextRequest): boolean {
 	const fetchSite = req.headers.get('sec-fetch-site');
 	if (fetchSite) return fetchSite === 'same-origin' || fetchSite === 'none';

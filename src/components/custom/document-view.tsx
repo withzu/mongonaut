@@ -4,9 +4,9 @@ import { PencilIcon, TrashIcon } from 'lucide-react';
 import { memo, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { JsonEditorProps as LibJsonEditorProps } from 'json-edit-react';
+import type { JsonViewerProps } from 'json-edit-react';
 import { Button } from '@/components/ui/button';
-import { ClientJsonEditor } from '@/components/custom/client-json-editor';
+import { ClientJsonViewer } from '@/components/custom/client-json-editor';
 import { DocumentEditorDialog } from '@/components/custom/document-editor-dialog';
 import { ShortcutTooltip } from '@/components/custom/shortcut-tooltip';
 import { useShortcut } from '@/hooks/use-shortcut';
@@ -27,13 +27,13 @@ interface JsonDocument {
 	[key: string]: unknown;
 }
 
-interface ReadonlyJsonEditorProps extends LibJsonEditorProps {
+interface ReadonlyJsonViewerProps extends JsonViewerProps {
 	className?: string;
 	data: JsonDocument;
 	collapse: number;
 }
 
-const MemoizedJsonEditor = memo<ReadonlyJsonEditorProps>(ClientJsonEditor);
+const MemoizedJsonViewer = memo<ReadonlyJsonViewerProps>(ClientJsonViewer);
 
 export function DocumentView({
 	data,
@@ -96,7 +96,6 @@ export function DocumentView({
 		}
 	};
 
-	// These act on the document that has focus, so every view answers for itself.
 	const isSelected = () => viewRef.current?.contains(window.document.activeElement) ?? false;
 
 	useShortcut('copy-document', () => {
@@ -155,12 +154,9 @@ export function DocumentView({
 				</div>
 			)}
 
-			<MemoizedJsonEditor
+			<MemoizedJsonViewer
 				className="h-full w-full overflow-auto"
 				data={document}
-				restrictAdd
-				restrictDelete
-				restrictEdit
 				collapse={1}
 			/>
 

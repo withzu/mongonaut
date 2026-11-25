@@ -135,11 +135,6 @@ export function getExternalURLInfo(): ExternalURLInfo {
 	return cachedExternalURL;
 }
 
-/**
- * Base URL for redirects and other absolute URLs handed to the browser. Behind
- * a reverse proxy the request URL can be the internal listen address, so the
- * configured external URL wins over it.
- */
 export function getPublicBaseURL(reqUrl: string): string {
 	return getExternalURLInfo().url || reqUrl;
 }

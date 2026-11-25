@@ -30,8 +30,6 @@ export async function register() {
 
 	if (process.env.NEXT_PHASE === 'phase-production-build') return;
 
-	// Connect once at startup so an unreachable MongoDB shows up in the logs right
-	// away instead of on the first request. The controller logs the outcome.
 	const { getMongoController } = await import('@/lib/mongoController');
 	try {
 		const connecting = getMongoController().ensureConnection();

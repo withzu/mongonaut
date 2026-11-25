@@ -31,9 +31,7 @@ interface DocumentEditorDialogProps {
 	database: string;
 	collection: string;
 	initialValue: string;
-	/** Extended JSON of the `_id` being edited. Required in edit mode. */
 	documentIdJson?: string | null;
-	/** Fingerprint of the document as it was loaded, used to detect a concurrent write. */
 	revision?: string;
 	onCloseAutoFocus?: (event: Event) => void;
 }
@@ -125,7 +123,6 @@ export function DocumentEditorDialog({
 				onOpenChange(false);
 				router.refresh();
 			} else {
-				// A conflict keeps the dialog open so the edit is not lost.
 				toast.error(result.error, { duration: 8000 });
 			}
 		} catch (error) {

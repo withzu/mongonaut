@@ -17,7 +17,6 @@ export interface SessionPayload {
 	name?: string;
 	ver?: number;
 	recovery?: boolean;
-	/** Fingerprint of the credential configuration the session was issued under. */
 	bind?: string;
 }
 
@@ -82,13 +81,7 @@ export async function verifyPayload<T>(secret: string, token: string): Promise<T
 	}
 }
 
-/**
- * Ties STATIC_PASSWORD and OIDC sessions to the configuration that issued them,
- * so rotating the shared password or pointing at another identity provider or
- * client ends every existing session. ACCOUNT sessions use tokenVersion instead.
- * The value is keyed with the auth secret, so the cookie reveals nothing about
- * the password.
- */
+// Rotating the password or OIDC settings ends existing sessions.
 async function sessionBinding(cfg: AuthConfig, mode: AuthMode): Promise<string | null> {
 	if (!cfg.secret) return null;
 	if (mode === 'STATIC_PASSWORD' && cfg.staticPassword) {
@@ -100,8 +93,6 @@ async function sessionBinding(cfg: AuthConfig, mode: AuthMode): Promise<string |
 	return null;
 }
 
-// The allowlist is checked on every request, not only at login, so removing an
-// address from MONGONAUT_OIDC_ALLOWED_EMAILS ends that user's session at once.
 function oidcEmailStillAllowed(cfg: AuthConfig, email: string | undefined): boolean {
 	const allowed = cfg.oidc?.allowedEmails;
 	if (!allowed || allowed.length === 0) return true;
@@ -134,10 +125,6 @@ export async function createSessionToken(
 	return { token, payload };
 }
 
-/**
- * Returns the session only if it is a session token issued for the active auth
- * mode and, for STATIC_PASSWORD and OIDC, for the current credential settings.
- */
 export async function readSessionToken(
 	cfg: AuthConfig,
 	token: string | undefined,

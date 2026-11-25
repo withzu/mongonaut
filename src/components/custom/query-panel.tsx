@@ -79,8 +79,7 @@ function coerce(raw: string): unknown {
 	}
 
 	const num = Number(trimmed);
-	// Number() rounds integers beyond 2^53, so a 64-bit id would never match.
-	// Sending the exact digits as a Long keeps them intact.
+	// Number() loses precision beyond 2^53, so keep the digits as a Long.
 	if (!Number.isSafeInteger(num) && INTEGER_PATTERN.test(trimmed)) {
 		const exact = BigInt(trimmed);
 		if (BigInt.asIntN(64, exact) === exact) return { $numberLong: exact.toString() };
@@ -236,8 +235,7 @@ export function QueryPanel({
 		}
 		setPipelineError(null);
 
-		// A pipeline with $out or $merge never goes into the URL, where every
-		// reload or shared link would run it again. It runs here, once.
+		// Writing pipelines never go into the URL, where a reload would run them again.
 		setIsRunningPipeline(true);
 		try {
 			const result = await runWritePipeline(database, collection, pipelineJson);
@@ -287,7 +285,6 @@ export function QueryPanel({
 			runFind();
 			return;
 		}
-		// A pipeline can write, so it only runs while its editor has focus.
 		if (!panelRef.current?.contains(document.activeElement)) return false;
 		if (!isRunningPipeline) void runAggregate();
 	});
