@@ -185,12 +185,6 @@ Mongonaut release images are published through GitHub Container Registry for Lin
 ghcr.io/withzu/mongonaut:latest
 ```
 
-For production installations, consider pinning a specific release instead of using `latest`.
-
-```yaml
-image: ghcr.io/withzu/mongonaut:0.1.6
-```
-
 Available versions are listed on the [GitHub Releases page](https://github.com/withzu/mongonaut/releases).
 
 Release images carry a software bill of materials and a provenance attestation:
