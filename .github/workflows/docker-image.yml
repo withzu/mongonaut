@@ -104,9 +104,3 @@ jobs:
           # what is inside the image before running it against their database.
           provenance: mode=max
           sbom: true
-          cache-from: |
-            type=gha,scope=amd64
-            type=gha,scope=arm64
-          cache-to: |
-            type=gha,scope=amd64,mode=max
-            type=gha,scope=arm64,mode=max
