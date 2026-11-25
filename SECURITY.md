@@ -4,7 +4,7 @@ Mongonaut has direct read and write access to the MongoDB deployment it is conne
 
 ## Supported Versions
 
-Mongonaut is beta software. Only the most recent release receives security fixes.
+Only the most recent release receives security fixes.
 
 | Version | Supported |
 | --- | --- |

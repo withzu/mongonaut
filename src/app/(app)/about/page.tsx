@@ -101,7 +101,6 @@ export default function AboutPage() {
 						<Badge variant="secondary" className="tabular-nums">
 							v{getAppVersion()}
 						</Badge>
-						<Badge variant="outline">Beta release</Badge>
 						<Badge variant="outline">MIT license</Badge>
 						<Suspense fallback={null}>
 							<UpdateNotice />

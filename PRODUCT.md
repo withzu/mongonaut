@@ -83,7 +83,7 @@ Access control, read-only mode and identity provider support are real capabiliti
 - Incumbent visual world: `src/app/tokens.css`, a neutral gray palette with a magenta accent in both light and dark. Rules are in `DESIGN.md`.
 - Real product surfaces that can be shown: sidebar database tree, collection document view, query panel, JSON document editor, account manager, login, first-run setup, about page, connection error state.
 - Public proof: MIT license, GitHub releases, stars and issues, the published container image.
-- **Absent and not to be invented:** no testimonials, no named customers, no user counts, no download or performance benchmarks, no pricing, no commercial plan, no SLA, no security certification. The product is beta software and says so.
+- **Absent and not to be invented:** no testimonials, no named customers, no user counts, no download or performance benchmarks, no pricing, no commercial plan, no SLA, no security certification.
 
 ## Product Principles
 

@@ -546,7 +546,7 @@ pnpm build
 
 ## Project Status
 
-Mongonaut is actively developed and currently released as beta software. Interfaces, configuration, and behavior may still change between releases.
+Mongonaut is actively developed. Releases follow semantic versioning, so breaking changes to configuration or behavior only ship with a new major version.
 
 See the [release history](https://github.com/withzu/mongonaut/releases) for current versions and changes.
 
